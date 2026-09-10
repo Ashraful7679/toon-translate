@@ -250,7 +250,7 @@ def wrap_text(text,font,max_width):
 
 def fit_font(draw,text,max_w,max_h):
     if not FONT_PATH:return ImageFont.load_default()
-    for size in range(max(10,int(min(max_h,max_w)*0.08)),7,-1):
+    for size in range(max(10,int(min(max_h,max_w)*0.10)),7,-1):
         f=ImageFont.truetype(FONT_PATH,size);lines=wrap_text(text,f,max_w);spacing=max(2,size//5);bbox=draw.multiline_textbbox((0,0),'\n'.join(lines),font=f,spacing=spacing,align='center')
         if bbox[2]-bbox[0]<=max_w and bbox[3]-bbox[1]<=max_h:return f
     return ImageFont.truetype(FONT_PATH,8)
