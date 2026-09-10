@@ -8,7 +8,7 @@ OLD_FIT = '''def fit_font(draw,text,max_w,max_h):
         f=ImageFont.truetype(FONT_PATH,size)
         lines=wrap_text(text,f,max_w)
         spacing=max(2,size//5)
-        bbox=draw.multiline_textbbox((0,0),'\\n'.join(lines),font=f,spacing=spacing,align='center')
+        bbox=draw.multiline_textbbox((0,0),'\n'.join(lines),font=f,spacing=spacing,align='center')
         if bbox[2]-bbox[0]<=max_w and bbox[3]-bbox[1]<=max_h:return f
     return ImageFont.truetype(FONT_PATH,8)
 '''
@@ -40,7 +40,7 @@ def fit_font(draw,text,max_w,max_h,polygon=None,region=None):
         f=ImageFont.truetype(FONT_PATH,size)
         lines=wrap_text(text,f,max_w)
         spacing=max(2,size//5)
-        joined='\\n'.join(lines)
+        joined='\n'.join(lines)
         bbox=draw.multiline_textbbox((0,0),joined,font=f,spacing=spacing,align='center')
         tw,th=bbox[2]-bbox[0],bbox[3]-bbox[1]
         if tw>max_w or th>max_h:
@@ -66,6 +66,23 @@ JS_FOCUS_NEW = "function scrollToBubbleBBox(b){const stage=document.getElementBy
 JS_EVENTS_OLD = "ta.addEventListener('input',()=>{it.translation=ta.value;});ta.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();const n=wrap.querySelectorAll('textarea')[i+1];if(n)n.focus();}});"
 JS_EVENTS_NEW = "ta.addEventListener('compositionstart',()=>ta.dataset.composing='1');ta.addEventListener('compositionend',()=>{ta.dataset.composing='0';it.translation=ta.value.normalize('NFC');});ta.addEventListener('input',()=>{it.translation=ta.value.normalize('NFC');});ta.addEventListener('focus',()=>setTimeout(()=>scrollToBubbleBBox(it.bbox),100));ta.addEventListener('click',()=>setTimeout(()=>scrollToBubbleBBox(it.bbox),100));ta.addEventListener('keydown',e=>{if(e.isComposing||ta.dataset.composing==='1')return;if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();const n=wrap.querySelectorAll('textarea')[i+1];if(n){n.focus();setTimeout(()=>scrollToBubbleBBox(list[i+1]?.bbox),100);}}});"
 
+# Bengali render isolation: keep the existing render pipeline, but replace only
+# the measurement/draw calls used for translated text with HarfBuzz shaping.
+OLD_BN_WIDTH = 'test_w=draw.textbbox((0,0),test,font=f)[2]'
+NEW_BN_WIDTH = 'test_w=bengali_text_width(test,f)'
+OLD_BN_CHECK = 'if draw.textbbox((0,0),line,font=f)[2]>max(20,allowed):ok=False;break'
+NEW_BN_CHECK = 'if bengali_text_width(line,f)>max(20,allowed):ok=False;break'
+OLD_BN_DRAW = """            block='\n'.join(lines)
+            bb=draw.multiline_textbbox((0,0),block,font=font,spacing=spacing,align='center')
+            tw,th=bb[2]-bb[0],bb[3]-bb[1]
+            tx=x0+(x1-x0-tw)/2;ty=y0+(y1-y0-th)/2
+            draw.multiline_text((tx,ty),block,font=font,fill='black',spacing=spacing,align='center')"""
+NEW_BN_DRAW = """            if hasattr(font, 'path'):
+                draw_bengali_block(draw,(x0,y0,x1,y1),lines,font,spacing=spacing,fill='black',align='center')
+            else:
+                block='\n'.join(lines)
+                draw.multiline_text((x0,y0),block,font=font,fill='black',spacing=spacing,align='center')"""
+
 class MainLoader(importlib.machinery.SourceFileLoader):
     def get_data(self, path):
         data = super().get_data(path)
@@ -79,6 +96,10 @@ class MainLoader(importlib.machinery.SourceFileLoader):
             src = src.replace(OLD_ROI, NEW_ROI)
             src = src.replace(JS_FOCUS_OLD, JS_FOCUS_NEW)
             src = src.replace(JS_EVENTS_OLD, JS_EVENTS_NEW)
+            src = src.replace(OLD_BN_WIDTH, NEW_BN_WIDTH)
+            src = src.replace(OLD_BN_CHECK, NEW_BN_CHECK)
+            src = src.replace(OLD_BN_DRAW, NEW_BN_DRAW)
+            src = "from bengali_renderer import text_width as bengali_text_width, draw_bengali_block\n" + src
             data = src.encode('utf-8')
         except Exception as e:
             print('toon runtime patch skipped:', e)
