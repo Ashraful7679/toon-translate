@@ -211,69 +211,398 @@ def polygon_width_at(poly,y,min_x,max_x):
     if len(xs)>=2:return max(0.0,min(max_x,max(xs))-max(min_x,min(xs)))
     return max(0.0,max_x-min_x) if point_in_poly((min_x+max_x)/2,y,poly) else 0.0
 
-def fit_polygon_text(draw,text,poly,bbox):
-    x0,y0,x1,y1=bbox;inner=[p for p in poly if len(p)>=2]
-    if len(inner)<3:inner=[[x0,y0],[x1,y0],[x1,y1],[x0,y1]]
-    miny=max(y0,min(p[1] for p in inner));maxy=min(y1,max(p[1] for p in inner));font_path=ensure_bengali_font()
-    if not font_path:return None,[],0
-    max_size=max(8,int(min(x1-x0,maxy-miny)*0.18))
-    for size in range(max_size,7,-1):
-        f=ImageFont.truetype(font_path,size);spacing=max(2,size//5);words=text.split();lines=[];cur=''
+def fit_circle_text(draw, text, bbox, font_path, padding=12):
+    """
+    Fit Unicode/Bengali text inside a safe circle.
+
+    The circle diameter is based on the smaller dimension
+    of the selected bubble.
+    """
+
+    x0, y0, x1, y1 = map(int, bbox)
+
+    bw = max(1, x1 - x0)
+    bh = max(1, y1 - y0)
+
+    # Smaller bubble side determines the safe circle.
+    diameter = min(bw, bh) - (padding * 2)
+
+    if diameter < 16:
+        return ImageFont.truetype(font_path, 8), [text], 2
+
+    radius = diameter / 2.0
+
+    # Exact center of the selected bubble.
+    cx = (x0 + x1) / 2.0
+    cy = (y0 + y1) / 2.0
+
+    # Start reasonably large, then reduce until everything fits.
+    max_size = max(8, int(diameter * 0.24))
+
+    for size in range(max_size, 7, -1):
+
+        font = ImageFont.truetype(font_path, size)
+        spacing = max(2, int(size * 0.20))
+
+        # ---------------------------------------------------------
+        # Word wrapping
+        # ---------------------------------------------------------
+        words = text.split()
+        lines = []
+        current = ""
+
         for word in words:
-            test=word if not cur else cur+' '+word;test_w=draw.textbbox((0,0),test,font=f)[2];allowed=polygon_width_at(inner,miny+size,x0,x1)-16
-            if allowed<20:allowed=x1-x0-20
-            if test_w<=allowed:cur=test
+
+            test = word if not current else current + " " + word
+
+            box = draw.textbbox(
+                (0, 0),
+                test,
+                font=font
+            )
+
+            test_width = box[2] - box[0]
+
+            if test_width <= diameter:
+                current = test
             else:
-                if cur:lines.append(cur)
-                cur=word
-        if cur:lines.append(cur)
-        if not lines:continue
-        line_heights=[];total=0
+                if current:
+                    lines.append(current)
+
+                current = word
+
+        if current:
+            lines.append(current)
+
+        if not lines:
+            continue
+
+        # ---------------------------------------------------------
+        # If a single word itself is wider than the safe circle,
+        # this font size cannot work.
+        # ---------------------------------------------------------
+        line_sizes = []
+
+        too_wide = False
+
         for line in lines:
-            bb=draw.textbbox((0,0),line,font=f);hline=bb[3]-bb[1];line_heights.append(hline);total+=hline
-        total+=spacing*(len(lines)-1)
-        if total>(maxy-miny-12):continue
-        y_start=(miny+maxy-total)/2;yy=y_start;ok=True
-        for line,hline in zip(lines,line_heights):
-            cy=yy+hline/2;allowed=polygon_width_at(inner,cy,x0,x1)-16
-            if draw.textbbox((0,0),line,font=f)[2]>max(20,allowed):ok=False;break
-            yy+=hline+spacing
-        if ok:return f,lines,spacing
-    return ImageFont.truetype(font_path,8),[text],2
+
+            box = draw.textbbox(
+                (0, 0),
+                line,
+                font=font
+            )
+
+            width = box[2] - box[0]
+            height = box[3] - box[1]
+
+            if width > diameter:
+                too_wide = True
+                break
+
+            line_sizes.append((width, height))
+
+        if too_wide:
+            continue
+
+        # ---------------------------------------------------------
+        # Total text block height
+        # ---------------------------------------------------------
+        total_height = (
+            sum(h for _, h in line_sizes)
+            + spacing * max(0, len(line_sizes) - 1)
+        )
+
+        if total_height > diameter:
+            continue
+
+        # ---------------------------------------------------------
+        # Check every line against the safe circle.
+        #
+        # The entire horizontal extent of every line must remain
+        # inside the circle.
+        # ---------------------------------------------------------
+        y = cy - total_height / 2.0
+
+        ok = True
+
+        for width, height in line_sizes:
+
+            line_cy = y + height / 2.0
+
+            dy = abs(line_cy - cy)
+
+            if dy >= radius:
+                ok = False
+                break
+
+            circle_width = 2.0 * (
+                max(
+                    0.0,
+                    radius * radius - dy * dy
+                ) ** 0.5
+            )
+
+            # Additional safety margin.
+            allowed_width = circle_width - (padding * 0.5)
+
+            if width > allowed_width:
+                ok = False
+                break
+
+            y += height + spacing
+
+        if ok:
+            return font, lines, spacing
+
+    # Very small fallback.
+    return ImageFont.truetype(font_path, 8), [text], 2
+
 
 @app.post('/api/render')
-async def render(file:UploadFile=File(...),items_json:str=Form(...)):
-    try:
-        data=await file.read();im=Image.open(io.BytesIO(data)).convert('RGB');items=json.loads(items_json)
-        if not isinstance(items,list):raise ValueError('items_json must be a list')
-        draw=ImageDraw.Draw(im)
-        for item in items:
-            bbox=item.get('bbox') or [];text=(item.get('translation') or '').strip()
-            if len(bbox)!=4 or not text:continue
-            x0,y0,x1,y1=[int(v) for v in bbox];poly=item.get('polygon') or []
-            x0=max(0,min(im.width-1,x0));y0=max(0,min(im.height-1,y0));x1=max(x0+1,min(im.width,x1));y1=max(y0+1,min(im.height,y1))
-            if poly and len(poly)>=3:
-                safe_poly=[]
-                for p in poly:
-                    if len(p)>=2:safe_poly.append((max(0,min(im.width-1,int(p[0]))),max(0,min(im.height-1,int(p[1])))))
-                if len(safe_poly)>=3:draw.polygon(safe_poly,fill='white')
-                else:draw.rectangle((x0,y0,x1,y1),fill='white')
-            else:draw.rectangle((x0,y0,x1,y1),fill='white')
-            font,lines,spacing=fit_polygon_text(draw,text,poly,[x0,y0,x1,y1])
-            if font is None:
-                font=ImageFont.load_default();lines=[text];spacing=2
-            block='\n'.join(lines)
-            bb=draw.multiline_textbbox((0,0),block,font=font,spacing=spacing,align='center')
-            tw,th=bb[2]-bb[0],bb[3]-bb[1]
-            tx=x0+(x1-x0-tw)/2;ty=y0+(y1-y0-th)/2
-            draw.multiline_text((tx,ty),block,font=font,fill='black',spacing=spacing,align='center')
-        out=io.BytesIO();im.save(out,format='PNG');out.seek(0)
-        return StreamingResponse(out,media_type='image/png',headers={'Content-Disposition':'inline; filename="translated.png"'})
-    except HTTPException:raise
-    except Exception as e:
-        print('RENDER ERROR:',repr(e))
-        raise HTTPException(500,f'Render failed: {type(e).__name__}: {e}')
+async def render(
+    file: UploadFile = File(...),
+    items_json: str = Form(...)
+):
+    """
+    Render Unicode Bengali directly onto the selected bubbles.
 
+    Pipeline:
+
+        Avro/Unicode Bengali
+              ↓
+        Noto Sans Bengali
+              ↓
+        Safe-circle fitting
+              ↓
+        Centered text
+              ↓
+        Final PNG
+
+    No Bijoy conversion is used here.
+    """
+
+    try:
+
+        # ---------------------------------------------------------
+        # Read original image
+        # ---------------------------------------------------------
+        data = await file.read()
+
+        im = Image.open(
+            io.BytesIO(data)
+        ).convert('RGB')
+
+        # ---------------------------------------------------------
+        # Parse selected bubble data
+        # ---------------------------------------------------------
+        items = json.loads(items_json)
+
+        if not isinstance(items, list):
+            raise ValueError(
+                'items_json must be a list'
+            )
+
+        # ---------------------------------------------------------
+        # Make sure Bengali font is available
+        # ---------------------------------------------------------
+        font_path = ensure_bengali_font()
+
+        if not font_path:
+            raise HTTPException(
+                status_code=500,
+                detail=(
+                    'Bengali font not found. '
+                    'NotoSansBengali-Regular.ttf is required.'
+                )
+            )
+
+        draw = ImageDraw.Draw(im)
+
+        # ---------------------------------------------------------
+        # Process each selected bubble
+        # ---------------------------------------------------------
+        for item in items:
+
+            bbox = item.get('bbox') or []
+
+            # IMPORTANT:
+            # Translation remains Unicode Bengali.
+            # No Bijoy conversion.
+            text = (
+                item.get('translation') or ''
+            ).strip()
+
+            if len(bbox) != 4 or not text:
+                continue
+
+            # -----------------------------------------------------
+            # Sanitize bbox
+            # -----------------------------------------------------
+            x0, y0, x1, y1 = [
+                int(v) for v in bbox
+            ]
+
+            x0 = max(
+                0,
+                min(im.width - 1, x0)
+            )
+
+            y0 = max(
+                0,
+                min(im.height - 1, y0)
+            )
+
+            x1 = max(
+                x0 + 1,
+                min(im.width, x1)
+            )
+
+            y1 = max(
+                y0 + 1,
+                min(im.height, y1)
+            )
+
+            # -----------------------------------------------------
+            # Get bubble polygon
+            # -----------------------------------------------------
+            poly = item.get('polygon') or []
+
+            safe_poly = []
+
+            if poly and len(poly) >= 3:
+
+                for p in poly:
+
+                    if len(p) >= 2:
+
+                        px = max(
+                            0,
+                            min(
+                                im.width - 1,
+                                int(p[0])
+                            )
+                        )
+
+                        py = max(
+                            0,
+                            min(
+                                im.height - 1,
+                                int(p[1])
+                            )
+                        )
+
+                        safe_poly.append(
+                            (px, py)
+                        )
+
+            # -----------------------------------------------------
+            # Clear original bubble text
+            # -----------------------------------------------------
+            #
+            # Prefer the detected polygon when available.
+            # Otherwise use the bounding rectangle.
+            #
+            if len(safe_poly) >= 3:
+
+                draw.polygon(
+                    safe_poly,
+                    fill='white'
+                )
+
+            else:
+
+                draw.rectangle(
+                    (x0, y0, x1, y1),
+                    fill='white'
+                )
+
+            # -----------------------------------------------------
+            # Fit Unicode Bengali inside safe circle
+            # -----------------------------------------------------
+            font, lines, spacing = fit_circle_text(
+                draw,
+                text,
+                [x0, y0, x1, y1],
+                font_path,
+                padding=12
+            )
+
+            # -----------------------------------------------------
+            # Prepare multiline text
+            # -----------------------------------------------------
+            block = '\n'.join(lines)
+
+            bb = draw.multiline_textbbox(
+                (0, 0),
+                block,
+                font=font,
+                spacing=spacing,
+                align='center'
+            )
+
+            tw = bb[2] - bb[0]
+            th = bb[3] - bb[1]
+
+            # -----------------------------------------------------
+            # Exact center of bubble
+            # -----------------------------------------------------
+            cx = (x0 + x1) / 2.0
+            cy = (y0 + y1) / 2.0
+
+            tx = cx - tw / 2.0
+            ty = cy - th / 2.0
+
+            # -----------------------------------------------------
+            # Final Unicode Bengali rendering
+            # -----------------------------------------------------
+            draw.multiline_text(
+                (tx, ty),
+                block,
+                font=font,
+                fill='black',
+                spacing=spacing,
+                align='center'
+            )
+
+        # ---------------------------------------------------------
+        # Return original-size PNG
+        # ---------------------------------------------------------
+        out = io.BytesIO()
+
+        im.save(
+            out,
+            format='PNG'
+        )
+
+        out.seek(0)
+
+        return StreamingResponse(
+            out,
+            media_type='image/png',
+            headers={
+                'Content-Disposition':
+                    'inline; filename="translated.png"'
+            }
+        )
+
+    except HTTPException:
+        raise
+
+    except Exception as e:
+
+        print(
+            'RENDER ERROR:',
+            repr(e)
+        )
+
+        raise HTTPException(
+            status_code=500,
+            detail=(
+                f'Render failed: '
+                f'{type(e).__name__}: {e}'
+            )
+        )
 @app.post('/api/auto-translate')
 async def auto_translate(req:AutoTranslateRequest):
     out=[]

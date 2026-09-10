@@ -1,29 +1,569 @@
 <!DOCTYPE html>
 <html lang="bn">
+
 <head>
-<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Toon Translation Studio</title>
-<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+Bengali:wght@400;500;600;700&display=swap" rel="stylesheet">
-<style>
-:root{--bg-dark:#0f172a;--bg-panel:#1e293b;--bg-card:#334155;--border-color:#475569;--accent:#6366f1;--accent-light:#818cf8;--text-main:#f8fafc;--text-muted:#94a3b8;--warning:#f59e0b;--success:#10b981}*{box-sizing:border-box;margin:0;padding:0;font-family:'Inter','Noto Sans Bengali',sans-serif}body{background:var(--bg-dark);color:var(--text-main);height:100vh;display:flex;flex-direction:column;overflow:hidden}header{background:rgba(30,41,59,.8);backdrop-filter:blur(12px);border-bottom:1px solid var(--border-color);padding:12px 24px;display:flex;align-items:center;justify-content:space-between;z-index:10}.brand{display:flex;align-items:center;gap:12px}.brand-icon{background:linear-gradient(135deg,#6366f1,#a855f7);width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px}.brand-title h1{font-size:18px}.brand-title p{font-size:12px;color:var(--text-muted)}.header-actions{display:flex;align-items:center;gap:12px}.btn{background:var(--bg-card);color:#fff;border:1px solid var(--border-color);padding:8px 16px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:8px}.btn-primary{background:linear-gradient(135deg,#6366f1,#4f46e5);border:none}.btn-success{background:linear-gradient(135deg,#10b981,#059669);border:none}.app-container{display:flex;flex:1;overflow:hidden}.stage-container{flex:1;display:flex;flex-direction:column;background:#090d16;position:relative;overflow:hidden}.stage-toolbar{padding:8px 16px;background:rgba(30,41,59,.5);border-bottom:1px solid var(--border-color);display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}.view-toggle{display:flex;background:var(--bg-dark);padding:3px;border-radius:8px;border:1px solid var(--border-color)}.toggle-btn{padding:6px 12px;font-size:12px;border-radius:6px;cursor:pointer;background:transparent;color:var(--text-muted);border:none}.toggle-btn.active{background:var(--accent);color:#fff}.zoom-controls{display:flex;align-items:center;gap:4px}.zoom-btn,.zoom-level{height:30px;min-width:30px;padding:0 8px;display:inline-flex;align-items:center;justify-content:center;background:var(--bg-dark);color:#fff;border:1px solid var(--border-color);border-radius:6px;cursor:pointer;font-size:12px;font-weight:700}.zoom-level{min-width:58px}.stage-view{flex:1;display:flex;align-items:center;justify-content:center;overflow:auto;padding:24px}.stage-view.zoomed{align-items:flex-start;justify-content:flex-start}.canvas-wrapper{position:relative;box-shadow:0 20px 40px rgba(0,0,0,.6);flex:0 0 auto}.canvas-wrapper img{display:block;width:auto;height:auto;max-width:none;max-height:none;user-select:none;-webkit-user-drag:none}.overlay-svg{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none}.bbox-rect{fill:rgba(99,102,241,.15);stroke:#818cf8;stroke-width:2;cursor:pointer;pointer-events:auto;rx:4;vector-effect:non-scaling-stroke}.bbox-rect:hover,.bbox-rect.active{fill:rgba(245,158,11,.25);stroke:#f59e0b;stroke-width:3}.bubble-rect{fill:rgba(16,185,129,.10);stroke:#10b981;stroke-width:3;cursor:pointer;pointer-events:auto;rx:10;vector-effect:non-scaling-stroke}.bubble-rect:hover,.bubble-rect.active{fill:rgba(245,158,11,.20);stroke:#f59e0b;stroke-width:4}.sidebar{width:420px;background:var(--bg-panel);border-left:1px solid var(--border-color);display:flex;flex-direction:column}.sidebar-header{padding:16px 20px;border-bottom:1px solid var(--border-color);display:flex;align-items:center;justify-content:space-between}.sidebar-title{font-size:15px;font-weight:700}.badge-count{background:var(--accent);color:#fff;font-size:11px;padding:2px 8px;border-radius:12px}.sidebar-content{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:12px}.item-card{background:var(--bg-dark);border:1px solid var(--border-color);border-radius:10px;padding:12px 14px}.item-card.active{border-color:var(--warning);box-shadow:0 0 0 2px rgba(245,158,11,.3)}.item-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}.item-actions{display:flex;gap:4px}.btn-icon{background:transparent;border:none;color:var(--text-muted);cursor:pointer;padding:5px;border-radius:4px}.btn-icon:hover{color:#fff;background:var(--bg-card)}.original-text{font-size:13px;color:var(--text-muted);background:rgba(255,255,255,.03);padding:8px 10px;border-radius:6px;margin-bottom:10px;border-left:3px solid var(--accent);word-break:break-word}.translation-input{width:100%;background:#0f172a;border:1px solid var(--border-color);border-radius:6px;padding:10px 12px;color:#fff;font-size:14px;font-family:'Noto Sans Bengali',sans-serif;resize:vertical;min-height:48px;outline:none}.input-tip{font-size:11px;color:var(--text-muted);margin-top:4px;display:flex;justify-content:space-between}.empty-state{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 20px;text-align:center;color:var(--text-muted)}.spinner-overlay{position:absolute;inset:0;background:rgba(15,23,42,.8);backdrop-filter:blur(4px);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:50;opacity:0;pointer-events:none}.spinner-overlay.show{opacity:1;pointer-events:auto}.spinner{width:40px;height:40px;border:4px solid rgba(99,102,241,.2);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}
-</style></head><body>
-<header><div class="brand"><div class="brand-icon">🎨</div><div class="brand-title"><h1>Toon Translation Studio</h1><p>কার্টুন ইমেজ অনুবাদ স্টুডিও (Bulk & Manual Workflow)</p></div></div><div class="header-actions"><input type="file" id="fileInput" accept="image/*" multiple style="display:none" onchange="handleFileSelect(event)"><button class="btn" onclick="document.getElementById('fileInput').click()">📁 ছবি সিলেক্ট করুন</button><button class="btn" onclick="autoTranslateAll()">✨ অটো অনুবাদ</button><button class="btn btn-primary" onclick="renderImage()">⚡ রেন্ডার</button><button class="btn btn-success" onclick="downloadImage()">💾 ডাউনলোড</button></div></header>
-<div class="app-container"><div class="stage-container"><div class="stage-toolbar"><div class="view-toggle"><button class="toggle-btn active" id="btnOriginal" onclick="switchView('original')">মূল কার্টুন</button><button class="toggle-btn" id="btnRendered" onclick="switchView('rendered')">অনুবাদিত কার্টুন</button></div><div class="zoom-controls"><button class="zoom-btn" onclick="changeZoom(-.1)">−</button><button class="zoom-level" id="zoomLevelText" onclick="setZoom(1)">100%</button><button class="zoom-btn" onclick="changeZoom(.1)">+</button><button class="zoom-btn" onclick="fitImage()">Fit</button><button class="zoom-btn" onclick="setZoom(1)">100%</button></div><div id="imageCounterText" style="font-size:12px;color:var(--text-muted)">কোনো ছবি লোড করা হয়নি</div></div><div class="stage-view" id="stageView"><div class="spinner-overlay" id="spinner"><div class="spinner"></div><p id="spinnerText" style="margin-top:12px">প্রসেসিং করা হচ্ছে...</p></div><div class="canvas-wrapper" id="canvasWrapper" style="display:none"><img id="mainImage"><svg class="overlay-svg" id="overlaySvg"></svg></div><div class="empty-state" id="emptyState"><div style="font-size:48px">🖼️</div><h3>কার্টুন ছবি আপলোড করুন</h3></div></div><div class="gallery-bar" id="galleryBar" style="display:none"></div></div><div class="sidebar"><div class="sidebar-header"><div class="sidebar-title">ডিটেক্ট/সিলেক্ট করা টেক্সট <span class="badge-count" id="detectionCount">0</span></div><div style="font-size:11px;color:var(--text-muted)">Bubble click = select</div></div><div class="sidebar-content" id="sidebarContent"><div class="empty-state"><div style="font-size:48px">💬</div><p>ছবি সিলেক্ট করার পর bubble-এ ক্লিক করুন</p></div></div></div></div>
-<script>
-let imageList=[],currentIndex=-1,currentRenderedUrl=null,activeView='original',zoomLevel=1,fitMode=false,selectedId=null;
-function showSpinner(t){document.getElementById('spinnerText').innerText=t;document.getElementById('spinner').classList.add('show')}function hideSpinner(){document.getElementById('spinner').classList.remove('show')}
-function setZoom(z){zoomLevel=Math.max(.25,Math.min(3,z));fitMode=false;applyZoom()}function changeZoom(d){setZoom(Math.round((zoomLevel+d)*100)/100)}function fitImage(){fitMode=true;applyZoom()}function applyZoom(){const w=document.getElementById('canvasWrapper');const img=document.getElementById('mainImage');if(!img.naturalWidth)return;let scale=zoomLevel;if(fitMode){const sv=document.getElementById('stageView');scale=Math.min((sv.clientWidth-48)/img.naturalWidth,(sv.clientHeight-48)/img.naturalHeight);scale=Math.max(.1,Math.min(3,scale))}w.style.width=img.naturalWidth*scale+'px';w.style.height=img.naturalHeight*scale+'px';img.style.width=img.naturalWidth*scale+'px';img.style.height=img.naturalHeight*scale+'px';document.getElementById('zoomLevelText').innerText=fitMode?'Fit':Math.round(zoomLevel*100)+'%';document.getElementById('stageView').classList.toggle('zoomed',!fitMode)}
-function switchView(v){activeView=v;document.getElementById('btnOriginal').classList.toggle('active',v==='original');document.getElementById('btnRendered').classList.toggle('active',v==='rendered');if(currentIndex>=0){const item=imageList[currentIndex];document.getElementById('mainImage').src=v==='rendered'&&item.renderedUrl?item.renderedUrl:item.url}}
-function renderOverlay(){const svg=document.getElementById('overlaySvg');svg.innerHTML='';if(currentIndex<0)return;const d=imageList[currentIndex].detections||[];d.forEach((x,i)=>{const b=x.bbox;const r=document.createElementNS('http://www.w3.org/2000/svg','rect');r.setAttribute('x',b[0]);r.setAttribute('y',b[1]);r.setAttribute('width',b[2]-b[0]);r.setAttribute('height',b[3]-b[1]);r.setAttribute('class','bbox-rect '+(x.id===selectedId?'active':''));r.onclick=e=>{e.stopPropagation();selectItem(x.id)};svg.appendChild(r)});}
-function selectItem(id){selectedId=id;const c=document.querySelectorAll('.item-card');c.forEach(e=>e.classList.toggle('active',Number(e.dataset.id)===id));renderOverlay();const el=document.getElementById('card-'+id);if(el)el.scrollIntoView({behavior:'smooth',block:'nearest'})}
-function deleteItem(id){const item=imageList[currentIndex];item.detections=(item.detections||[]).filter(x=>x.id!==id);item.detections.forEach((x,i)=>x.id=i);selectedId=null;renderSidebar();renderOverlay()}
-function renderSidebar(){const box=document.getElementById('sidebarContent');const d=imageList[currentIndex]?.detections||[];document.getElementById('detectionCount').innerText=d.length;if(!d.length){box.innerHTML='<div class="empty-state"><div style="font-size:48px">💬</div><p>Bubble-এ ক্লিক করে selection যোগ করুন</p></div>';return}box.innerHTML=d.map((x,i)=>`<div class="item-card ${x.id===selectedId?'active':''}" id="card-${x.id}" data-id="${x.id}"><div class="item-header"><b>Bubble ${i+1}</b><div class="item-actions"><button class="btn-icon" onclick="selectItem(${x.id})">🎯</button><button class="btn-icon" onclick="deleteItem(${x.id})" title="Delete">🗑️</button></div></div><div class="original-text">${escapeHtml(x.text||'Manual bubble')}</div><textarea class="translation-input" id="tr-${x.id}" placeholder="বাংলা অনুবাদ লিখুন...">${escapeHtml(x.translation||'')}</textarea><div class="input-tip"><span>এই bubble-এর মধ্যে auto-fit হবে</span><span>Enter → next</span></div></div>`).join('');d.forEach(x=>{const el=document.getElementById('tr-'+x.id);el.addEventListener('input',()=>x.translation=el.value);el.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();const next=document.getElementById('tr-'+(x.id+1));if(next)next.focus()}})});}
-function escapeHtml(s){return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
-function handleFileSelect(e){const files=[...e.target.files];if(!files.length)return;imageList=files.map(file=>({file,url:URL.createObjectURL(file),detections:[],renderedUrl:null}));currentIndex=0;loadCurrentImage();}
-async function loadCurrentImage(){const item=imageList[currentIndex];activeView='original';currentRenderedUrl=null;document.getElementById('mainImage').src=item.url;document.getElementById('canvasWrapper').style.display='block';document.getElementById('emptyState').style.display='none';zoomLevel=1;fitMode=false;document.getElementById('zoomLevelText').innerText='100%';document.getElementById('mainImage').onload=()=>applyZoom();renderSidebar();renderOverlay();showSpinner('OCR চলছে...');try{const fd=new FormData();fd.append('file',item.file);const r=await fetch('/api/detect',{method:'POST',body:fd});if(!r.ok)throw new Error(await r.text());const data=await r.json();item.detections=data.detections||[];renderSidebar();renderOverlay()}catch(err){console.error(err);alert('OCR error: '+err.message)}finally{hideSpinner()}}
-async function autoTranslateAll(){if(currentIndex<0)return;const d=imageList[currentIndex].detections||[];if(!d.length)return;showSpinner('অনুবাদ চলছে...');try{const r=await fetch('/api/auto-translate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({texts:d.map(x=>x.text||'')})});const data=await r.json();d.forEach((x,i)=>x.translation=data.translations?.[i]||'');renderSidebar()}catch(e){alert('Translation error: '+e.message)}finally{hideSpinner()}}
-async function renderImage(){if(currentIndex<0)return;const item=imageList[currentIndex];const d=(item.detections||[]).filter(x=>(x.translation||'').trim());if(!d.length){alert('আগে অন্তত একটি বাংলা অনুবাদ লিখুন।');return}showSpinner('কার্টুন রেন্ডার হচ্ছে...');try{const fd=new FormData();fd.append('file',item.file);fd.append('items_json',JSON.stringify(d));const r=await fetch('/api/render',{method:'POST',body:fd});if(!r.ok)throw new Error(await r.text());const blob=await r.blob();item.renderedUrl=URL.createObjectURL(blob);activeView='rendered';document.getElementById('btnOriginal').classList.remove('active');document.getElementById('btnRendered').classList.add('active');document.getElementById('mainImage').src=item.renderedUrl;document.getElementById('mainImage').onload=()=>applyZoom()}catch(e){console.error(e);alert('Render error: '+e.message)}finally{hideSpinner()}}
-function downloadImage(){if(currentIndex<0)return;const item=imageList[currentIndex];if(!item.renderedUrl){alert('আগে Render করুন।');return}const a=document.createElement('a');a.href=item.renderedUrl;a.download=(item.file.name.replace(/\.[^.]+$/,'')||'translated')+'-translated.png';document.body.appendChild(a);a.click();a.remove()}
-window.addEventListener('resize',()=>{if(fitMode)applyZoom()});
-// IMPORTANT: mouse wheel never changes zoom. It only scrolls the image normally.
-</script></body></html>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Toon Translation Studio</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+Bengali:wght@400;500;600;700&display=swap"
+        rel="stylesheet">
+    <style>
+        :root {
+            --bg-dark: #0f172a;
+            --bg-panel: #1e293b;
+            --bg-card: #334155;
+            --border-color: #475569;
+            --accent: #6366f1;
+            --accent-light: #818cf8;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --warning: #f59e0b;
+            --success: #10b981
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', 'Noto Sans Bengali', sans-serif
+        }
+
+        body {
+            background: var(--bg-dark);
+            color: var(--text-main);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden
+        }
+
+        header {
+            background: rgba(30, 41, 59, .8);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--border-color);
+            padding: 12px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            z-index: 10
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 12px
+        }
+
+        .brand-icon {
+            background: linear-gradient(135deg, #6366f1, #a855f7);
+            width: 38px;
+            height: 38px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px
+        }
+
+        .brand-title h1 {
+            font-size: 18px
+        }
+
+        .brand-title p {
+            font-size: 12px;
+            color: var(--text-muted)
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 12px
+        }
+
+        .btn {
+            background: var(--bg-card);
+            color: #fff;
+            border: 1px solid var(--border-color);
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #6366f1, #4f46e5);
+            border: none
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #10b981, #059669);
+            border: none
+        }
+
+        .app-container {
+            display: flex;
+            flex: 1;
+            overflow: hidden
+        }
+
+        .stage-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: #090d16;
+            position: relative;
+            overflow: hidden
+        }
+
+        .stage-toolbar {
+            padding: 8px 16px;
+            background: rgba(30, 41, 59, .5);
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            flex-wrap: wrap
+        }
+
+        .view-toggle {
+            display: flex;
+            background: var(--bg-dark);
+            padding: 3px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color)
+        }
+
+        .toggle-btn {
+            padding: 6px 12px;
+            font-size: 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            background: transparent;
+            color: var(--text-muted);
+            border: none
+        }
+
+        .toggle-btn.active {
+            background: var(--accent);
+            color: #fff
+        }
+
+        .zoom-controls {
+            display: flex;
+            align-items: center;
+            gap: 4px
+        }
+
+        .zoom-btn,
+        .zoom-level {
+            height: 30px;
+            min-width: 30px;
+            padding: 0 8px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--bg-dark);
+            color: #fff;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 700
+        }
+
+        .zoom-level {
+            min-width: 58px
+        }
+
+        .stage-view {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: auto;
+            padding: 24px
+        }
+
+        .stage-view.zoomed {
+            align-items: flex-start;
+            justify-content: flex-start
+        }
+
+        .canvas-wrapper {
+            position: relative;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, .6);
+            flex: 0 0 auto
+        }
+
+        .canvas-wrapper img {
+            display: block;
+            width: auto;
+            height: auto;
+            max-width: none;
+            max-height: none;
+            user-select: none;
+            -webkit-user-drag: none
+        }
+
+        .overlay-svg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none
+        }
+
+        .bbox-rect {
+            fill: rgba(99, 102, 241, .15);
+            stroke: #818cf8;
+            stroke-width: 2;
+            cursor: pointer;
+            pointer-events: auto;
+            rx: 4;
+            vector-effect: non-scaling-stroke
+        }
+
+        .bbox-rect:hover,
+        .bbox-rect.active {
+            fill: rgba(245, 158, 11, .25);
+            stroke: #f59e0b;
+            stroke-width: 3
+        }
+
+        .bubble-rect {
+            fill: rgba(16, 185, 129, .10);
+            stroke: #10b981;
+            stroke-width: 3;
+            cursor: pointer;
+            pointer-events: auto;
+            rx: 10;
+            vector-effect: non-scaling-stroke
+        }
+
+        .bubble-rect:hover,
+        .bubble-rect.active {
+            fill: rgba(245, 158, 11, .20);
+            stroke: #f59e0b;
+            stroke-width: 4
+        }
+
+        .sidebar {
+            width: 420px;
+            background: var(--bg-panel);
+            border-left: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column
+        }
+
+        .sidebar-header {
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: space-between
+        }
+
+        .sidebar-title {
+            font-size: 15px;
+            font-weight: 700
+        }
+
+        .badge-count {
+            background: var(--accent);
+            color: #fff;
+            font-size: 11px;
+            padding: 2px 8px;
+            border-radius: 12px
+        }
+
+        .sidebar-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px
+        }
+
+        .item-card {
+            background: var(--bg-dark);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 12px 14px
+        }
+
+        .item-card.active {
+            border-color: var(--warning);
+            box-shadow: 0 0 0 2px rgba(245, 158, 11, .3)
+        }
+
+        .item-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 8px
+        }
+
+        .item-actions {
+            display: flex;
+            gap: 4px
+        }
+
+        .btn-icon {
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            padding: 5px;
+            border-radius: 4px
+        }
+
+        .btn-icon:hover {
+            color: #fff;
+            background: var(--bg-card)
+        }
+
+        .original-text {
+            font-size: 13px;
+            color: var(--text-muted);
+            background: rgba(255, 255, 255, .03);
+            padding: 8px 10px;
+            border-radius: 6px;
+            margin-bottom: 10px;
+            border-left: 3px solid var(--accent);
+            word-break: break-word
+        }
+
+        .translation-input {
+            width: 100%;
+            background: #0f172a;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 10px 12px;
+            color: #fff;
+            font-size: 14px;
+            font-family: 'Noto Sans Bengali', sans-serif;
+            resize: vertical;
+            min-height: 48px;
+            outline: none
+        }
+
+        .input-tip {
+            font-size: 11px;
+            color: var(--text-muted);
+            margin-top: 4px;
+            display: flex;
+            justify-content: space-between
+        }
+
+        .empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 40px 20px;
+            text-align: center;
+            color: var(--text-muted)
+        }
+
+        .spinner-overlay {
+            position: absolute;
+            inset: 0;
+            background: rgba(15, 23, 42, .8);
+            backdrop-filter: blur(4px);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 50;
+            opacity: 0;
+            pointer-events: none
+        }
+
+        .spinner-overlay.show {
+            opacity: 1;
+            pointer-events: auto
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid rgba(99, 102, 241, .2);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin .8s linear infinite
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg)
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <div class="brand">
+            <div class="brand-icon">🎨</div>
+            <div class="brand-title">
+                <h1>Toon Translation Studio</h1>
+                <p>কার্টুন ইমেজ অনুবাদ স্টুডিও (Bulk & Manual Workflow)</p>
+            </div>
+        </div>
+        <div class="header-actions"><input type="file" id="fileInput" accept="image/*" multiple style="display:none"
+                onchange="handleFileSelect(event)"><button class="btn"
+                onclick="document.getElementById('fileInput').click()">📁 ছবি সিলেক্ট করুন</button><button class="btn"
+                onclick="autoTranslateAll()">✨ অটো অনুবাদ</button><button class="btn btn-primary"
+                onclick="renderImage()">⚡ রেন্ডার</button><button class="btn btn-success" onclick="downloadImage()">💾
+                ডাউনলোড</button></div>
+    </header>
+    <div class="app-container">
+        <div class="stage-container">
+            <div class="stage-toolbar">
+                <div class="view-toggle"><button class="toggle-btn active" id="btnOriginal"
+                        onclick="switchView('original')">মূল কার্টুন</button><button class="toggle-btn" id="btnRendered"
+                        onclick="switchView('rendered')">অনুবাদিত কার্টুন</button></div>
+                <div class="zoom-controls"><button class="zoom-btn" onclick="changeZoom(-.1)">−</button><button
+                        class="zoom-level" id="zoomLevelText" onclick="setZoom(1)">100%</button><button class="zoom-btn"
+                        onclick="changeZoom(.1)">+</button><button class="zoom-btn"
+                        onclick="fitImage()">Fit</button><button class="zoom-btn" onclick="setZoom(1)">100%</button>
+                </div>
+                <div id="imageCounterText" style="font-size:12px;color:var(--text-muted)">কোনো ছবি লোড করা হয়নি</div>
+            </div>
+            <div class="stage-view" id="stageView">
+                <div class="spinner-overlay" id="spinner">
+                    <div class="spinner"></div>
+                    <p id="spinnerText" style="margin-top:12px">প্রসেসিং করা হচ্ছে...</p>
+                </div>
+                <div class="canvas-wrapper" id="canvasWrapper" style="display:none"><img id="mainImage"><svg
+                        class="overlay-svg" id="overlaySvg"></svg></div>
+                <div class="empty-state" id="emptyState">
+                    <div style="font-size:48px">🖼️</div>
+                    <h3>কার্টুন ছবি আপলোড করুন</h3>
+                </div>
+            </div>
+            <div class="gallery-bar" id="galleryBar" style="display:none"></div>
+        </div>
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <div class="sidebar-title">ডিটেক্ট/সিলেক্ট করা টেক্সট <span class="badge-count"
+                        id="detectionCount">0</span></div>
+                <div style="font-size:11px;color:var(--text-muted)">Bubble click = select</div>
+            </div>
+            <div class="sidebar-content" id="sidebarContent">
+                <div class="empty-state">
+                    <div style="font-size:48px">💬</div>
+                    <p>ছবি সিলেক্ট করার পর bubble-এ ক্লিক করুন</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        let imageList = [], currentIndex = -1, currentRenderedUrl = null, activeView = 'original', zoomLevel = 1, fitMode = false, selectedId = null;
+        function showSpinner(t) { document.getElementById('spinnerText').innerText = t; document.getElementById('spinner').classList.add('show') } function hideSpinner() { document.getElementById('spinner').classList.remove('show') }
+        function setZoom(z) { zoomLevel = Math.max(.25, Math.min(3, z)); fitMode = false; applyZoom() } function changeZoom(d) { setZoom(Math.round((zoomLevel + d) * 100) / 100) } function fitImage() { fitMode = true; applyZoom() } function applyZoom() { const w = document.getElementById('canvasWrapper'); const img = document.getElementById('mainImage'); if (!img.naturalWidth) return; let scale = zoomLevel; if (fitMode) { const sv = document.getElementById('stageView'); scale = Math.min((sv.clientWidth - 48) / img.naturalWidth, (sv.clientHeight - 48) / img.naturalHeight); scale = Math.max(.1, Math.min(3, scale)) } w.style.width = img.naturalWidth * scale + 'px'; w.style.height = img.naturalHeight * scale + 'px'; img.style.width = img.naturalWidth * scale + 'px'; img.style.height = img.naturalHeight * scale + 'px'; document.getElementById('zoomLevelText').innerText = fitMode ? 'Fit' : Math.round(zoomLevel * 100) + '%'; document.getElementById('stageView').classList.toggle('zoomed', !fitMode) }
+        function switchView(v) { activeView = v; document.getElementById('btnOriginal').classList.toggle('active', v === 'original'); document.getElementById('btnRendered').classList.toggle('active', v === 'rendered'); if (currentIndex >= 0) { const item = imageList[currentIndex]; document.getElementById('mainImage').src = v === 'rendered' && item.renderedUrl ? item.renderedUrl : item.url } }
+        function renderOverlay() { const svg = document.getElementById('overlaySvg'); svg.innerHTML = ''; if (currentIndex < 0) return; const d = imageList[currentIndex].detections || []; d.forEach((x, i) => { const b = x.bbox; const r = document.createElementNS('http://www.w3.org/2000/svg', 'rect'); r.setAttribute('x', b[0]); r.setAttribute('y', b[1]); r.setAttribute('width', b[2] - b[0]); r.setAttribute('height', b[3] - b[1]); r.setAttribute('class', 'bbox-rect ' + (x.id === selectedId ? 'active' : '')); r.onclick = e => { e.stopPropagation(); selectItem(x.id) }; svg.appendChild(r) }); }
+        function selectItem(id) { selectedId = id; const c = document.querySelectorAll('.item-card'); c.forEach(e => e.classList.toggle('active', Number(e.dataset.id) === id)); renderOverlay(); const el = document.getElementById('card-' + id); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'nearest' }) }
+        function deleteItem(id) { const item = imageList[currentIndex]; item.detections = (item.detections || []).filter(x => x.id !== id); item.detections.forEach((x, i) => x.id = i); selectedId = null; renderSidebar(); renderOverlay() }
+        function renderSidebar() { const box = document.getElementById('sidebarContent'); const d = imageList[currentIndex]?.detections || []; document.getElementById('detectionCount').innerText = d.length; if (!d.length) { box.innerHTML = '<div class="empty-state"><div style="font-size:48px">💬</div><p>Bubble-এ ক্লিক করে selection যোগ করুন</p></div>'; return } box.innerHTML = d.map((x, i) => `<div class="item-card ${x.id === selectedId ? 'active' : ''}" id="card-${x.id}" data-id="${x.id}"><div class="item-header"><b>Bubble ${i + 1}</b><div class="item-actions"><button class="btn-icon" onclick="selectItem(${x.id})">🎯</button><button class="btn-icon" onclick="deleteItem(${x.id})" title="Delete">🗑️</button></div></div><div class="original-text">${escapeHtml(x.text || 'Manual bubble')}</div><textarea class="translation-input" id="tr-${x.id}" placeholder="বাংলা অনুবাদ লিখুন...">${escapeHtml(x.translation || '')}</textarea><div class="input-tip"><span>এই bubble-এর মধ্যে auto-fit হবে</span><span>Enter → next</span></div></div>`).join(''); d.forEach(x => { const el = document.getElementById('tr-' + x.id); el.addEventListener('input', () => x.translation = el.value); el.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); const next = document.getElementById('tr-' + (x.id + 1)); if (next) next.focus() } }) }); }
+        function escapeHtml(s) { return String(s ?? '').replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m])) }
+        function handleFileSelect(e) {
+            const files = [...e.target.files];
+
+            if (!files.length) return;
+
+            imageList = files.map(file => ({
+                file: file,
+                url: URL.createObjectURL(file),
+
+                // Manual bubbles only.
+                detections: [],
+
+                // Final rendered image.
+                renderedUrl: null
+            }));
+
+            currentIndex = 0;
+
+            loadCurrentImage();
+        }
+        async function loadCurrentImage() {
+            const item = imageList[currentIndex];
+
+            if (!item) return;
+
+            // Always start with the original image.
+            activeView = 'original';
+            currentRenderedUrl = null;
+
+            const mainImage = document.getElementById('mainImage');
+            const canvasWrapper = document.getElementById('canvasWrapper');
+            const emptyState = document.getElementById('emptyState');
+            const zoomText = document.getElementById('zoomLevelText');
+
+            // ---------------------------------------------------------
+            // Show image immediately.
+            // NO OCR here.
+            // ---------------------------------------------------------
+            mainImage.src = item.url;
+
+            canvasWrapper.style.display = 'block';
+            emptyState.style.display = 'none';
+
+            // ---------------------------------------------------------
+            // Reset zoom
+            // ---------------------------------------------------------
+            zoomLevel = 1;
+            fitMode = false;
+
+            if (zoomText) {
+                zoomText.innerText = '100%';
+            }
+
+            // ---------------------------------------------------------
+            // Apply zoom after image is actually loaded.
+            // ---------------------------------------------------------
+            mainImage.onload = () => {
+                applyZoom();
+                renderOverlay();
+            };
+
+            // ---------------------------------------------------------
+            // Render current manual bubble list.
+            // ---------------------------------------------------------
+            renderSidebar();
+            renderOverlay();
+
+            // ---------------------------------------------------------
+            // IMPORTANT:
+            // Do NOT call /api/detect here.
+            //
+            // Old code was doing:
+            //
+            //   showSpinner('OCR চলছে...');
+            //   fetch('/api/detect'...)
+            //
+            // That caused EasyOCR/PyTorch to initialize whenever an
+            // image was uploaded.
+            // ---------------------------------------------------------
+        }
+        async function autoTranslateAll() { if (currentIndex < 0) return; const d = imageList[currentIndex].detections || []; if (!d.length) return; showSpinner('অনুবাদ চলছে...'); try { const r = await fetch('/api/auto-translate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ texts: d.map(x => x.text || '') }) }); const data = await r.json(); d.forEach((x, i) => x.translation = data.translations?.[i] || ''); renderSidebar() } catch (e) { alert('Translation error: ' + e.message) } finally { hideSpinner() } }
+        async function renderImage() { if (currentIndex < 0) return; const item = imageList[currentIndex]; const d = (item.detections || []).filter(x => (x.translation || '').trim()); if (!d.length) { alert('আগে অন্তত একটি বাংলা অনুবাদ লিখুন।'); return } showSpinner('কার্টুন রেন্ডার হচ্ছে...'); try { const fd = new FormData(); fd.append('file', item.file); fd.append('items_json', JSON.stringify(d)); const r = await fetch('/api/render', { method: 'POST', body: fd }); if (!r.ok) throw new Error(await r.text()); const blob = await r.blob(); item.renderedUrl = URL.createObjectURL(blob); activeView = 'rendered'; document.getElementById('btnOriginal').classList.remove('active'); document.getElementById('btnRendered').classList.add('active'); document.getElementById('mainImage').src = item.renderedUrl; document.getElementById('mainImage').onload = () => applyZoom() } catch (e) { console.error(e); alert('Render error: ' + e.message) } finally { hideSpinner() } }
+        function downloadImage() { if (currentIndex < 0) return; const item = imageList[currentIndex]; if (!item.renderedUrl) { alert('আগে Render করুন।'); return } const a = document.createElement('a'); a.href = item.renderedUrl; a.download = (item.file.name.replace(/\.[^.]+$/, '') || 'translated') + '-translated.png'; document.body.appendChild(a); a.click(); a.remove() }
+        window.addEventListener('resize', () => { if (fitMode) applyZoom() });
+        // IMPORTANT: mouse wheel never changes zoom. It only scrolls the image normally.
+    </script>
+</body>
+
+</html>
