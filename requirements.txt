@@ -7,3 +7,5 @@ Pillow
 numpy
 deep-translator
 requests
+uharfbuzz
+freetype-py
