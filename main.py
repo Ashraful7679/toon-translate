@@ -69,6 +69,29 @@ async def serve_index():
     return fetch(img.src).then(r => r.blob()).then(b => new File([b], 'toon-page.png', {type:b.type || 'image/png'}));
   }
 
+  // Keep the active bubble visible in the image area while translating.
+  function scrollImageToBubble(i) {
+    const list = items(), it = list[i];
+    const stage = document.getElementById('stageView');
+    const img = document.getElementById('mainImage');
+    if (!it || !stage || !img || !img.naturalWidth || !img.naturalHeight) return;
+    const b = it.bbox || [];
+    if (b.length < 4) return;
+    const rect = img.getBoundingClientRect();
+    const stageRect = stage.getBoundingClientRect();
+    const cx = rect.left + ((b[0] + b[2]) / 2) * (rect.width / img.naturalWidth);
+    const cy = rect.top + ((b[1] + b[3]) / 2) * (rect.height / img.naturalHeight);
+    const targetLeft = stage.scrollLeft + (cx - stageRect.left) - stage.clientWidth / 2;
+    const targetTop = stage.scrollTop + (cy - stageRect.top) - stage.clientHeight / 2;
+    const maxLeft = Math.max(0, stage.scrollWidth - stage.clientWidth);
+    const maxTop = Math.max(0, stage.scrollHeight - stage.clientHeight);
+    stage.scrollTo({
+      left: Math.max(0, Math.min(maxLeft, targetLeft)),
+      top: Math.max(0, Math.min(maxTop, targetTop)),
+      behavior: 'smooth'
+    });
+  }
+
   function addToolbar() {
     const toolbar = document.querySelector('.stage-toolbar');
     if (!toolbar || document.getElementById('bubbleModeBtn')) return;
@@ -105,12 +128,12 @@ async def serve_index():
     items().forEach((it,i)=>{const[x0,y0,x1,y1]=it.bbox,g=document.createElementNS('http://www.w3.org/2000/svg','g'),rect=document.createElementNS('http://www.w3.org/2000/svg','rect');rect.setAttribute('x',x0);rect.setAttribute('y',y0);rect.setAttribute('width',Math.max(1,x1-x0));rect.setAttribute('height',Math.max(1,y1-y0));rect.setAttribute('class','bbox-rect active');rect.style.fill='rgba(16,185,129,.10)';rect.style.stroke='#10b981';rect.addEventListener('click',e=>{e.stopPropagation();focusCard(i);});g.appendChild(rect);svg.appendChild(g);});
   }
 
-  function focusCard(i){const el=document.getElementById('bubble-card-'+i);if(el){el.scrollIntoView({behavior:'smooth',block:'center'});const inp=el.querySelector('textarea');if(inp)inp.focus();}}
+  function focusCard(i){const el=document.getElementById('bubble-card-'+i);if(el){el.scrollIntoView({behavior:'smooth',block:'center'});const inp=el.querySelector('textarea');if(inp){inp.focus();setTimeout(()=>scrollImageToBubble(i),80);}}}
 
   function renderManualSidebar(){
     const wrap=document.getElementById('sidebarContent'),count=document.getElementById('detectionCount');if(!wrap)return;const list=items();if(count)count.textContent=list.length;
     if(!list.length){wrap.innerHTML='<div class="empty-state"><div class="empty-icon">💬</div><p>Bubble Select চালু রেখে ছবির প্রতিটি পূর্ণ বাবলের ভিতরে একবার ক্লিক করুন। অসম্পূর্ণ বাবল ক্লিক করবেন না।</p></div>';return;}
-    wrap.innerHTML='';list.forEach((it,i)=>{const card=document.createElement('div');card.className='item-card';card.id='bubble-card-'+i;card.innerHTML=`<div class="item-header"><span class="item-badge">Bubble ${i+1}</span><div class="item-actions"><button class="btn-icon" title="এই বাবল মুছুন">🗑️</button></div></div><div class="original-text">Manual bubble selection • ${it.bbox[2]-it.bbox[0]} × ${it.bbox[3]-it.bbox[1]} px</div><div class="input-wrapper"><textarea class="translation-input" placeholder="এখানে বাংলা অনুবাদ লিখুন...">${it.translation||''}</textarea></div><div class="input-tip"><span>Enter = পরের বাবল</span><span>Render করলে লেখা বাবলের মধ্যে Auto-Fit হবে</span></div>`;const ta=card.querySelector('textarea');ta.addEventListener('input',()=>{it.translation=ta.value;});ta.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();const n=wrap.querySelectorAll('textarea')[i+1];if(n)n.focus();}});card.querySelector('.btn-icon').onclick=()=>{list.splice(i,1);renderManualSidebar();drawManualOverlay();};wrap.appendChild(card);});
+    wrap.innerHTML='';list.forEach((it,i)=>{const card=document.createElement('div');card.className='item-card';card.id='bubble-card-'+i;card.innerHTML=`<div class="item-header"><span class="item-badge">Bubble ${i+1}</span><div class="item-actions"><button class="btn-icon" title="এই বাবল মুছুন">🗑️</button></div></div><div class="original-text">Manual bubble selection • ${it.bbox[2]-it.bbox[0]} × ${it.bbox[3]-it.bbox[1]} px</div><div class="input-wrapper"><textarea class="translation-input" placeholder="এখানে বাংলা অনুবাদ লিখুন...">${it.translation||''}</textarea></div><div class="input-tip"><span>Enter = পরের বাবল</span><span>Render করলে লেখা বাবলের মধ্যে Auto-Fit হবে</span></div>`;const ta=card.querySelector('textarea');ta.addEventListener('focus',()=>{setTimeout(()=>scrollImageToBubble(i),80);});ta.addEventListener('click',()=>{setTimeout(()=>scrollImageToBubble(i),50);});ta.addEventListener('input',()=>{it.translation=ta.value;});ta.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();const n=wrap.querySelectorAll('textarea')[i+1];if(n){n.focus();setTimeout(()=>scrollImageToBubble(i+1),80);}}});card.querySelector('.btn-icon').onclick=()=>{list.splice(i,1);renderManualSidebar();drawManualOverlay();};wrap.appendChild(card);});
   }
 
   async function renderManual(){
@@ -122,7 +145,6 @@ async def serve_index():
       const res=await fetch('/api/render',{method:'POST',body:fd});if(!res.ok)throw new Error(await res.text());
       const blob=await res.blob(),url=URL.createObjectURL(blob);
       window.currentRenderedUrl=url;
-      // Keep the rendered URL in the same image object used by switchView/downloadImage.
       try{if(typeof imageList!=='undefined'&&typeof currentIndex!=='undefined'&&imageList[currentIndex])imageList[currentIndex].renderedUrl=url;}catch(e){}
       const img=document.getElementById('mainImage');
       if(typeof activeView!=='undefined')activeView='rendered';
@@ -134,12 +156,12 @@ async def serve_index():
 
   function install(){
     addToolbar();const img=document.getElementById('mainImage');if(img&&!img.dataset.bubbleBound){img.dataset.bubbleBound='1';img.addEventListener('click',selectBubble);}
-    const renderBtn=[...document.querySelectorAll('button')].find(b=>b.textContent.includes('রেন্ডার কার্টুন'));
+    const renderBtn=[...document.querySelectorAll('button')].find(b=>b.textContent.includes('রেন্ডার কার্টুন')) || [...document.querySelectorAll('button')].find(b=>b.textContent.includes('রেন্ডার'));
     if(renderBtn&&!renderBtn.dataset.manualRender){renderBtn.dataset.manualRender='1';renderBtn.addEventListener('click',e=>{if(items().length){e.stopImmediatePropagation();renderManual();}},true);}
     const observer=new MutationObserver(()=>{addToolbar();const im=document.getElementById('mainImage');if(im&&!im.dataset.bubbleBound){im.dataset.bubbleBound='1';im.addEventListener('click',selectBubble);}});observer.observe(document.body,{childList:true,subtree:true});renderManualSidebar();drawManualOverlay();
   }
   window.addEventListener('load',()=>setTimeout(install,250));
-  window.toonBubbleManual={renderManual,renderManualSidebar,drawManualOverlay};
+  window.toonBubbleManual={renderManual,renderManualSidebar,drawManualOverlay,scrollImageToBubble};
 })();
 </script>
 '''
@@ -188,121 +210,100 @@ def merge_detections(results):
         duplicate_index=None
         for i,existing in enumerate(kept):
             iou=bbox_iou(item['bbox'],existing['bbox']);sim=text_similarity(item['text'],existing['text'])
-            if iou>=0.30 or (sim>=0.78 and iou>=0.10):duplicate_index=i;break
+            if iou>=0.55 or (iou>=0.25 and sim>=0.65) or (sim>=0.90 and iou>=0.10):
+                duplicate_index=i;break
         if duplicate_index is None:kept.append(item)
-        elif item['conf']>kept[duplicate_index]['conf']:kept[duplicate_index]=item
     return kept
 
-def detect_text_with_easyocr(img,reader):
-    h,w=img.shape[:2];raw=[];max_tile_h=1500;overlap=250;tiles=[];y=0
-    while y<h:
-        y1=min(h,y+max_tile_h);tiles.append((y,y1))
-        if y1>=h:break
-        y=y1-overlap
-    for tile_y0,tile_y1 in tiles:
-        tile=img[tile_y0:tile_y1,0:w];tile_h,tile_w=tile.shape[:2]
-        for variant_index,variant in enumerate(preprocess_variants(tile)):
-            vh,vw=variant.shape[:2];scale_x=vw/float(tile_w);scale_y=vh/float(tile_h)
-            try:results=reader.readtext(variant,paragraph=False,detail=1,text_threshold=0.35,low_text=0.25,link_threshold=0.30,mag_ratio=1.0,canvas_size=2500,slope_ths=0.45,ycenter_ths=0.6,height_ths=0.6,width_ths=0.6,add_margin=0.05,decoder='greedy')
-            except Exception as err:print(f'EasyOCR error tile={tile_y0}:{tile_y1}, variant={variant_index}: {err}');continue
-            for bbox,text,conf in results:add_detection(raw,bbox,text,conf,tile_y0,scale_x,scale_y,w,h)
-    return merge_detections(raw)
-
-@app.post('/api/detect')
-async def detect(file:UploadFile=File(...)):
-    if not file:raise HTTPException(status_code=400,detail='No image provided')
-    contents=await file.read();img=cv2.imdecode(np.frombuffer(contents,np.uint8),cv2.IMREAD_COLOR)
-    if img is None:raise HTTPException(status_code=400,detail='Invalid image file')
-    h,w=img.shape[:2];print(f'OCR image received: {w}x{h}');reader=get_ocr_reader()
-    if reader is None:raise HTTPException(status_code=500,detail='EasyOCR could not be initialized')
-    try:detections=detect_text_with_easyocr(img,reader);print(f'EasyOCR final text detections: {len(detections)}')
-    except Exception as err:print('OCR Error:',err);raise HTTPException(status_code=500,detail=f'OCR failed: {err}')
-    detections.sort(key=lambda d:(d['bbox'][1],d['bbox'][0]))
-    for i,d in enumerate(detections):d['id']=i
-    return {'detections':detections,'width':w,'height':h}
-
-@app.post('/api/select-bubble')
-async def select_bubble(file:UploadFile=File(...),x:int=Form(...),y:int=Form(...)):
-    contents=await file.read();img=cv2.imdecode(np.frombuffer(contents,np.uint8),cv2.IMREAD_COLOR)
-    if img is None:raise HTTPException(status_code=400,detail='Invalid image')
-    h,w=img.shape[:2];x=max(0,min(w-1,int(x)));y=max(0,min(h-1,int(y)));gray=cv2.cvtColor(img,cv2.COLOR_BGR2GRAY);gray=cv2.GaussianBlur(gray,(3,3),0)
-    best=None;best_val=-1
-    for radius in (8,16,28):
-        yy0,yy1=max(0,y-radius),min(h,y+radius+1);xx0,xx1=max(0,x-radius),min(w,x+radius+1);patch=gray[yy0:yy1,xx0:xx1];loc=np.argwhere(patch>=205)
-        if loc.size:
-            for py,px in loc:
-                val=int(patch[py,px]);dist=(py+yy0-y)**2+(px+xx0-x)**2;score=val-dist*0.15
-                if score>best_val:best_val=score;best=(px+xx0,py+yy0)
-            if best:break
-    if best is None:best=(x,y)
-    sx,sy=best;flood=np.zeros((h+2,w+2),np.uint8);work=gray.copy();lo,up=25,25;flags=4|(255<<8)|cv2.FLOODFILL_FIXED_RANGE
-    try:cv2.floodFill(work,flood,(int(sx),int(sy)),255,(lo,lo,lo),(up,up,up),flags)
-    except Exception as e:raise HTTPException(status_code=400,detail=f'Bubble selection failed: {e}')
-    mask=(flood[1:-1,1:-1]>0).astype(np.uint8)*255;contours,_=cv2.findContours(mask,cv2.RETR_EXTERNAL,cv2.CHAIN_APPROX_SIMPLE)
-    if not contours:raise HTTPException(status_code=404,detail='No bubble found')
-    contour=max(contours,key=cv2.contourArea);area=float(cv2.contourArea(contour))
-    if area<max(200.0,w*h*0.00015) or area>w*h*0.35:raise HTTPException(status_code=404,detail='No complete speech bubble found at this point')
-    bx,by,bw,bh=cv2.boundingRect(contour);pad=max(3,int(min(bw,bh)*0.02));bx=max(0,bx-pad);by=max(0,by-pad);bw=min(w-bx,bw+2*pad);bh=min(h-by,bh+2*pad);eps=max(2.0,min(bw,bh)*0.01);approx=cv2.approxPolyDP(contour,eps,True).reshape(-1,2).tolist()
-    if len(approx)<4:approx=cv2.boxPoints(((bx+bw/2,by+bh/2),(bw,bh),0)).astype(int).tolist()
-    return {'bbox':[bx,by,bx+bw,by+bh],'polygon':approx,'area':area}
-
-@app.post('/api/auto-translate')
-async def auto_translate(req:AutoTranslateRequest):
+@app.post("/api/detect")
+async def detect(file: UploadFile=File(...)):
+    data=await file.read()
+    img=np.frombuffer(data,np.uint8);img=cv2.imdecode(img,cv2.IMREAD_COLOR)
+    if img is None: raise HTTPException(400,"Invalid image")
+    h,w=img.shape[:2];reader=get_ocr_reader()
+    if reader is None:return {"detections":[]}
     results=[]
-    for text in req.texts:
-        if not text.strip():results.append('');continue
-        translated=''
-        if translator:
-            try:translated=translator.translate(text)
-            except Exception as e:print('Translation Error:',e)
-        if not translated:
-            try:
-                import requests;r=requests.get('https://api.mymemory.translated.net/get',params={'q':text,'langpair':'en|bn'},timeout=6);translated=r.json().get('responseData',{}).get('translatedText','')
-            except Exception:translated=''
-        results.append(translated)
-    return {'translations':results}
+    tile_h=1500;overlap=250;ys=[0] if h<=tile_h else list(range(0,h,tile_h-overlap))
+    if ys and ys[-1]+tile_h<h:ys.append(h-tile_h)
+    for y0 in ys:
+        y1=min(h,y0+tile_h);tile=img[y0:y1]
+        for variant in preprocess_variants(tile):
+            scale_x=variant.shape[1]/tile.shape[1];scale_y=variant.shape[0]/tile.shape[0]
+            try: detections=reader.readtext(variant,paragraph=False,detail=1,text_threshold=0.35,low_text=0.25,link_threshold=0.30,mag_ratio=1.0,canvas_size=2500,slope_ths=0.45,ycenter_ths=0.6,height_ths=0.6,width_ths=0.6,add_margin=0.05,decoder="greedy")
+            except Exception as e: print("OCR Error:",e);continue
+            for pts,text,conf in detections:add_detection(results,pts,text,conf,y0,scale_x,scale_y,w,h)
+    merged=merge_detections(results)
+    for i,d in enumerate(merged):d['id']=i
+    return {"detections":merged}
 
-@app.post('/api/render')
-async def render_image(file:UploadFile=File(...),items_json:str=Form(...)):
-    contents=await file.read();img_cv=cv2.imdecode(np.frombuffer(contents,np.uint8),cv2.IMREAD_COLOR)
-    if img_cv is None:raise HTTPException(status_code=400,detail='Invalid image')
-    items=json.loads(items_json)
-    for item in items:
-        bbox=item.get('bbox');translation=item.get('translation','').strip()
-        if not bbox or not translation:continue
-        polygon=item.get('polygon') or []
-        if polygon and len(polygon)>=3:
-            pts=np.asarray(polygon,dtype=np.int32).reshape(-1,1,2);cv2.fillPoly(img_cv,[pts],(255,255,255))
+@app.post("/api/select-bubble")
+async def select_bubble(file: UploadFile=File(...),x:int=Form(...),y:int=Form(...)):
+    data=await file.read();arr=np.frombuffer(data,np.uint8);img=cv2.imdecode(arr,cv2.IMREAD_COLOR)
+    if img is None:raise HTTPException(400,"Invalid image")
+    h,w=img.shape[:2]
+    if not(0<=x<w and 0<=y<h):raise HTTPException(400,"Point outside image")
+    gray=cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
+    mask=cv2.inRange(gray,245,255)
+    n,labels,stats,cent=cv2.connectedComponentsWithStats(mask,8)
+    candidates=[]
+    for i in range(1,n):
+        x0,y0,bw,bh,area=stats[i]
+        if area<500 or bw<30 or bh<30:continue
+        if not(x0<=x<x0+bw and y0<=y<y0+bh):continue
+        fill=area/float(max(1,bw*bh))
+        if fill<0.35:continue
+        if bw>0.85*w or bh>0.85*h:continue
+        dist=abs((x0+bw/2)-x)+abs((y0+bh/2)-y)
+        candidates.append((dist,area,[int(x0),int(y0),int(x0+bw),int(y0+bh)]))
+    if not candidates:raise HTTPException(404,"Full speech bubble not found")
+    _,area,bbox=min(candidates,key=lambda t:t[0])
+    x0,y0,x1,y1=bbox;roi=gray[y0:y1,x0:x1];white=cv2.inRange(roi,245,255)
+    contours,_=cv2.findContours(white,cv2.RETR_EXTERNAL,cv2.CHAIN_APPROX_SIMPLE)
+    poly=[]
+    if contours:
+        c=max(contours,key=cv2.contourArea);eps=0.01*cv2.arcLength(c,True);p=cv2.approxPolyDP(c,eps,True).reshape(-1,2);poly=[[int(px+x0),int(py+y0)] for px,py in p]
+    return {"bbox":bbox,"polygon":poly,"area":area}
+
+def wrap_text(text,font,max_width):
+    words=text.split();lines=[];cur=""
+    for word in words:
+        test=word if not cur else cur+" "+word
+        if font.getlength(test)<=max_width:cur=test
         else:
-            x0,y0,x1,y1=map(int,bbox);pad=4;cv2.rectangle(img_cv,(max(0,x0-pad),max(0,y0-pad)),(min(img_cv.shape[1],x1+pad),min(img_cv.shape[0],y1+pad)),(255,255,255),-1)
-    img_pil=Image.fromarray(cv2.cvtColor(img_cv,cv2.COLOR_BGR2RGB));draw=ImageDraw.Draw(img_pil)
-    for item in items:
-        bbox=item.get('bbox');bangla_text=item.get('translation','').strip()
-        if not bbox or not bangla_text:continue
-        x0,y0,x1,y1=map(int,bbox);W=max(10,x1-x0);H=max(10,y1-y0);fontsize=min(96,max(12,int(H*0.34)));font=None;lines=[]
-        while fontsize>=10:
-            try:font=ImageFont.truetype(FONT_PATH,fontsize) if FONT_PATH else ImageFont.load_default()
-            except Exception:font=ImageFont.load_default()
-            words=bangla_text.split();lines=[];cur=''
-            for word in words:
-                test=cur+' '+word if cur else word
-                try:tw=draw.textbbox((0,0),test,font=font)[2]
-                except Exception:tw=len(test)*(fontsize*0.6)
-                if tw<=W*0.92:cur=test
-                else:
-                    if cur:lines.append(cur)
-                    cur=word
             if cur:lines.append(cur)
-            line_height=fontsize*1.15;total_h=len(lines)*line_height
-            if total_h<=H*0.86 or fontsize<=10:break
-            fontsize-=2
-        line_height=fontsize*1.15;total_h=len(lines)*line_height;curr_y=y0+(H-total_h)/2
-        for line in lines:
-            try:tw=draw.textbbox((0,0),line,font=font)[2]
-            except Exception:tw=len(line)*(fontsize*0.6)
-            curr_x=x0+max(0,(W-tw)/2);draw.text((curr_x,curr_y),line,font=font,fill=(0,0,0));curr_y+=line_height
-    final_cv=cv2.cvtColor(np.array(img_pil),cv2.COLOR_RGB2BGR);_,encoded_img=cv2.imencode('.png',final_cv)
-    return StreamingResponse(io.BytesIO(encoded_img.tobytes()),media_type='image/png')
+            cur=word
+    if cur:lines.append(cur)
+    return lines or [""]
 
-if __name__=='__main__':
-    import uvicorn;uvicorn.run(app,host='0.0.0.0',port=8000)
+def fit_font(draw,text,max_w,max_h):
+    if not FONT_PATH:return ImageFont.load_default()
+    for size in range(max(10,int(min(max_h,max_w)*0.08)),7,-1):
+        f=ImageFont.truetype(FONT_PATH,size)
+        lines=wrap_text(text,f,max_w);bbox=draw.multiline_textbbox((0,0),"\n".join(lines),font=f,spacing=max(2,size//5),align='center')
+        if bbox[2]-bbox[0]<=max_w and bbox[3]-bbox[1]<=max_h:return f
+    return ImageFont.truetype(FONT_PATH,8)
+
+@app.post("/api/render")
+async def render(file:UploadFile=File(...),items_json:str=Form(...)):
+    data=await file.read();im=Image.open(io.BytesIO(data)).convert('RGB');items=json.loads(items_json);draw=ImageDraw.Draw(im)
+    for item in items:
+        bbox=item.get('bbox') or [];text=(item.get('translation') or '').strip()
+        if len(bbox)!=4 or not text:continue
+        x0,y0,x1,y1=[int(v) for v in bbox]
+        poly=item.get('polygon') or []
+        if poly and len(poly)>=3:draw.polygon([tuple(p) for p in poly],fill='white')
+        else:draw.rectangle((x0,y0,x1,y1),fill='white')
+        max_w=max(20,x1-x0-20);max_h=max(20,y1-y0-20);font=fit_font(draw,text,max_w,max_h);lines=wrap_text(text,font,max_w);spacing=max(2,int(getattr(font,'size',12)*0.2));bb=draw.multiline_textbbox((0,0),'\n'.join(lines),font=font,spacing=spacing,align='center');tw,th=bb[2]-bb[0],bb[3]-bb[1];tx=x0+(x1-x0-tw)/2;ty=y0+(y1-y0-th)/2;draw.multiline_text((tx,ty),'\n'.join(lines),font=font,fill='black',spacing=spacing,align='center')
+    out=io.BytesIO();im.save(out,format='PNG');out.seek(0);return StreamingResponse(out,media_type='image/png',headers={'Content-Disposition':'attachment; filename="translated.png"'})
+
+@app.post("/api/auto-translate")
+async def auto_translate(req:AutoTranslateRequest):
+    out=[]
+    for t in req.texts:
+        if not t:out.append("");continue
+        try:
+            if translator:out.append(translator.translate(t))
+            else:out.append(t)
+        except Exception:out.append(t)
+    return {"translations":out}
+'''
