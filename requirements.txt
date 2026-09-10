@@ -1,4 +1,9 @@
+fastapi
+uvicorn
+python-multipart
 easyocr
-opencv-python
+opencv-python-headless
 Pillow
 numpy
+deep-translator
+requests
