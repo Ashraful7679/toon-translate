@@ -102,7 +102,7 @@ async def serve_index():
   function scrollStageToBubble(bbox){const stage=document.getElementById('stageView'),img=document.getElementById('mainImage'),wrapper=document.getElementById('canvasWrapper');if(!stage||!img||!wrapper||!img.naturalWidth||!bbox||bbox.length!==4)return;const scale=img.getBoundingClientRect().width/img.naturalWidth;if(!isFinite(scale)||scale<=0)return;const cx=((Number(bbox[0])+Number(bbox[2]))/2)*scale,cy=((Number(bbox[1])+Number(bbox[3]))/2)*scale;stage.scrollTo({left:Math.max(0,wrapper.offsetLeft+cx-stage.clientWidth/2),top:Math.max(0,wrapper.offsetTop+cy-stage.clientHeight/2),behavior:'smooth'});}
   function focusBubbleAndCard(i){const it=items()[i];if(!it)return;scrollStageToBubble(it.bbox);const el=document.getElementById('bubble-card-'+i);if(el){el.classList.add('active');el.scrollIntoView({behavior:'smooth',block:'nearest'});const inp=el.querySelector('textarea');if(inp)inp.focus({preventScroll:true});}}
   function bindManualTextarea(card,i){const ta=card.querySelector('textarea');if(!ta)return;ta.addEventListener('focus',()=>scrollStageToBubble(items()[i]?.bbox));ta.addEventListener('click',()=>scrollStageToBubble(items()[i]?.bbox));ta.addEventListener('input',()=>{items()[i].translation=ta.value;});ta.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();const n=document.querySelector('#sidebarContent textarea[data-bubble-index="'+(i+1)+'"]');if(n)n.focus();}});}
-  function renderManualSidebar(){const wrap=document.getElementById('sidebarContent'),count=document.getElementById('detectionCount');if(!wrap)return;const list=items();if(count)count.textContent=list.length;if(!list.length){wrap.innerHTML='<div class="empty-state"><div class="empty-icon">💬</div><p>Bubble Select চালু রেখে ছবির প্রতিটি পূর্ণ বাবলের ভিতরে একবার ক্লিক করুন।</p></div>';return;}wrap.innerHTML='';list.forEach((it,i)=>{const card=document.createElement('div');card.className='item-card';card.id='bubble-card-'+i;card.innerHTML=`<div class="item-header"><span class="item-badge">Bubble ${i+1}</span><div class="item-actions"><button class="btn-icon" title="এই বাবল মুছুন">🗑️</button></div></div><div class="original-text">Manual bubble • ${it.bbox[2]-it.bbox[0]} × ${it.bbox[3]-it.bbox[1]} px</div><div class="input-wrapper"><textarea class="translation-input" data-bubble-index="${i}" placeholder="এখানে বাংলা অনুবাদ লিখুন...">${it.translation||''}</textarea></div><div class="input-tip"><span>Enter = পরের বাবল</span><span>Polygon Auto-Fit</span></div>`;card.querySelector('.btn-icon').onclick=()=>{list.splice(i,1);renderManualSidebar();drawManualOverlay();};wrap.appendChild(card);bindManualTextarea(card,i);});}
+  function renderManualSidebar(){const wrap=document.getElementById('sidebarContent'),count=document.getElementById('detectionCount');if(!wrap)return;const list=items();if(count)count.textContent=list.length;if(!list.length){wrap.innerHTML='<div class="empty-state"><div class="empty-icon">💬</div><p>Bubble Select চালু রেখে ছবির প্রতিটি পূর্ণ বাবলের ভিতরে একবার ক্লিক করুন।</p></div>';return;}wrap.innerHTML='';list.forEach((it,i)=>{const card=document.createElement('div');card.className='item-card';card.id='bubble-card-'+i;card.innerHTML=`<div class="item-header"><span class="item-badge">Bubble ${i+1}</span><div class="item-actions"><button class="btn-icon" title="এই বাবল মুছুন">🗑️</button></div></div><div class="original-text">Manual bubble • ${it.bbox[2]-it.bbox[0]} × ${it.bbox[3]-it.bbox[1]} px</div><div class="input-wrapper"><textarea class="translation-input" data-bubble-index="${i}" placeholder="এখানে বাংলা অনুবাদ লিখুন...">${it.translation||''}</textarea></div><div class="input-tip"><span>Enter = পরের বাবল</span><span>Unicode + HarfBuzz</span></div>`;card.querySelector('.btn-icon').onclick=()=>{list.splice(i,1);renderManualSidebar();drawManualOverlay();};wrap.appendChild(card);bindManualTextarea(card,i);});}
   async function renderManual(){const list=items().filter(it=>it.translation&&it.translation.trim());if(!list.length){alert('কমপক্ষে একটি বাবলের বাংলা অনুবাদ লিখুন।');return;}try{if(window.showSpinner)window.showSpinner('বাবলের মধ্যে অনুবাদ বসানো হচ্ছে...');const file=await currentImageFile();if(!file)throw new Error('Image unavailable');const fd=new FormData();fd.append('file',file);fd.append('items_json',JSON.stringify(list));const res=await fetch('/api/render',{method:'POST',body:fd});if(!res.ok)throw new Error(await res.text());const blob=await res.blob(),url=URL.createObjectURL(blob);try{if(typeof imageList!=='undefined'&&typeof currentIndex!=='undefined'&&imageList[currentIndex])imageList[currentIndex].renderedUrl=url;}catch(e){}const img=document.getElementById('mainImage');if(typeof activeView!=='undefined')activeView='rendered';document.getElementById('btnOriginal')?.classList.remove('active');document.getElementById('btnRendered')?.classList.add('active');img.src=url;img.onload=()=>{if(typeof applyZoom==='function')applyZoom();drawManualOverlay();};}catch(e){console.error(e);alert('Render করা যায়নি: '+e.message);}finally{if(window.hideSpinner)window.hideSpinner();}}
   function install(){addToolbar();const img=document.getElementById('mainImage');if(img&&!img.dataset.bubbleBound){img.dataset.bubbleBound='1';img.addEventListener('click',selectBubble);}const renderBtn=[...document.querySelectorAll('button')].find(b=>b.textContent.includes('রেন্ডার কার্টুন'))||[...document.querySelectorAll('button')].find(b=>b.textContent.includes('রেন্ডার'));if(renderBtn&&!renderBtn.dataset.manualRender){renderBtn.dataset.manualRender='1';renderBtn.addEventListener('click',e=>{if(items().length){e.stopImmediatePropagation();renderManual();}},true);}const observer=new MutationObserver(()=>{addToolbar();const im=document.getElementById('mainImage');if(im&&!im.dataset.bubbleBound){im.dataset.bubbleBound='1';im.addEventListener('click',selectBubble);}});observer.observe(document.body,{childList:true,subtree:true});renderManualSidebar();drawManualOverlay();}
   window.addEventListener('load',()=>setTimeout(install,250));window.toonBubbleManual={renderManual,renderManualSidebar,drawManualOverlay,scrollStageToBubble,focusBubbleAndCard};
@@ -191,418 +191,189 @@ async def select_bubble(file:UploadFile=File(...),x:int=Form(...),y:int=Form(...
         c=max(contours,key=cv2.contourArea);eps=0.01*cv2.arcLength(c,True);p=cv2.approxPolyDP(c,eps,True).reshape(-1,2);poly=[[int(px+x0),int(py+y0)] for px,py in p]
     return {'bbox':bbox,'polygon':poly}
 
-def point_in_poly(x,y,poly):
-    inside=False
-    if not poly:return False
-    j=len(poly)-1
-    for i in range(len(poly)):
-        xi,yi=poly[i];xj,yj=poly[j]
-        if ((yi>y)!=(yj>y)) and x < (xj-xi)*(y-yi)/float((yj-yi) or 1e-9):inside=not inside
-        j=i
-    return inside
+# ---------------------------------------------------------------------------
+# Bengali rendering: Unicode -> HarfBuzz shaping -> FreeType glyph rasterizing
+# ---------------------------------------------------------------------------
 
-def polygon_width_at(poly,y,min_x,max_x):
-    xs=[]
-    for i in range(len(poly)):
-        x1,y1=poly[i];x2,y2=poly[(i+1)%len(poly)]
-        if y1==y2:
-            if abs(y-y1)<1.0:xs.extend([x1,x2])
-        elif min(y1,y2)<=y<=max(y1,y2):xs.append(x1+(y-y1)*(x2-x1)/float(y2-y1))
-    if len(xs)>=2:return max(0.0,min(max_x,max(xs))-max(min_x,min(xs)))
-    return max(0.0,max_x-min_x) if point_in_poly((min_x+max_x)/2,y,poly) else 0.0
+def _load_shaper(font_path):
+    import uharfbuzz as hb
+    import freetype
+    with open(font_path, 'rb') as f:
+        font_data = f.read()
+    hb_face = hb.Face(font_data)
+    hb_font = hb.Font(hb_face)
+    face = freetype.Face(font_path)
+    return hb, freetype, hb_font, face
 
-def fit_circle_text(draw, text, bbox, font_path, padding=12):
-    """
-    Fit Unicode/Bengali text inside a safe circle.
+def _shape_line(text, font_path, size):
+    hb, freetype, hb_font, face = _load_shaper(font_path)
+    face.set_pixel_sizes(0, int(size))
+    hb_font.scale = (int(size * 64), int(size * 64))
+    buf = hb.Buffer()
+    buf.add_str(text)
+    buf.guess_segment_properties()
+    hb.shape(hb_font, buf, {})
+    infos = buf.glyph_infos
+    positions = buf.glyph_positions
+    glyphs = []
+    advance = 0.0
+    for info, pos in zip(infos, positions):
+        glyphs.append((info.codepoint, pos.x_advance / 64.0, pos.y_advance / 64.0, pos.x_offset / 64.0, pos.y_offset / 64.0))
+        advance += pos.x_advance / 64.0
+    return face, glyphs, advance
 
-    The circle diameter is based on the smaller dimension
-    of the selected bubble.
-    """
+def _line_width(text, font_path, size):
+    if not text:
+        return 0.0
+    return _shape_line(text, font_path, size)[2]
 
-    x0, y0, x1, y1 = map(int, bbox)
-
-    bw = max(1, x1 - x0)
-    bh = max(1, y1 - y0)
-
-    # Smaller bubble side determines the safe circle.
-    diameter = min(bw, bh) - (padding * 2)
-
-    if diameter < 16:
-        return ImageFont.truetype(font_path, 8), [text], 2
-
-    radius = diameter / 2.0
-
-    # Exact center of the selected bubble.
-    cx = (x0 + x1) / 2.0
-    cy = (y0 + y1) / 2.0
-
-    # Start reasonably large, then reduce until everything fits.
-    max_size = max(8, int(diameter * 0.24))
-
-    for size in range(max_size, 7, -1):
-
-        font = ImageFont.truetype(font_path, size)
-        spacing = max(2, int(size * 0.20))
-
-        # ---------------------------------------------------------
-        # Word wrapping
-        # ---------------------------------------------------------
-        words = text.split()
-        lines = []
-        current = ""
-
+def _wrap_shaped_text(text, font_path, size, max_width):
+    text = re.sub(r'[ \t]+', ' ', (text or '').strip())
+    if not text:
+        return []
+    paragraphs = text.split('\n')
+    lines = []
+    for paragraph in paragraphs:
+        words = paragraph.split(' ')
+        if not words:
+            lines.append('')
+            continue
+        current = ''
         for word in words:
-
-            test = word if not current else current + " " + word
-
-            box = draw.textbbox(
-                (0, 0),
-                test,
-                font=font
-            )
-
-            test_width = box[2] - box[0]
-
-            if test_width <= diameter:
-                current = test
+            candidate = word if not current else current + ' ' + word
+            if _line_width(candidate, font_path, size) <= max_width:
+                current = candidate
             else:
                 if current:
                     lines.append(current)
-
-                current = word
-
-        if current:
+                if _line_width(word, font_path, size) > max_width:
+                    part = ''
+                    for ch in word:
+                        test = part + ch
+                        if part and _line_width(test, font_path, size) > max_width:
+                            lines.append(part)
+                            part = ch
+                        else:
+                            part = test
+                    current = part
+                else:
+                    current = word
+        if current or not lines:
             lines.append(current)
+    return lines
 
-        if not lines:
-            continue
+def _render_shaped_line(layer, text, font_path, size, x, baseline_y):
+    face, glyphs, _ = _shape_line(text, font_path, size)
+    pen_x = float(x)
+    for glyph_id, x_adv, y_adv, x_off, y_off in glyphs:
+        face.load_glyph(int(glyph_id), 0x4)
+        bitmap = face.glyph.bitmap
+        w = int(bitmap.width); h = int(bitmap.rows)
+        if w and h:
+            pitch = abs(int(bitmap.pitch))
+            raw = bytes(bitmap.buffer)
+            if pitch == w:
+                mask = Image.frombytes('L', (w, h), raw)
+            else:
+                packed = bytearray()
+                for row in range(h):
+                    packed.extend(raw[row * pitch:row * pitch + w])
+                mask = Image.frombytes('L', (w, h), bytes(packed))
+            gx = int(round(pen_x + face.glyph.bitmap_left + x_off))
+            gy = int(round(baseline_y - face.glyph.bitmap_top - y_off))
+            ink = Image.new('RGBA', (w, h), (0, 0, 0, 0))
+            ink.paste((0, 0, 0, 255), (0, 0, w, h), mask)
+            layer.alpha_composite(ink, (gx, gy))
+        pen_x += x_adv
 
-        # ---------------------------------------------------------
-        # If a single word itself is wider than the safe circle,
-        # this font size cannot work.
-        # ---------------------------------------------------------
-        line_sizes = []
+def _text_layer(text, font_path, size, max_width):
+    lines = _wrap_shaped_text(text, font_path, size, max_width)
+    if not lines:
+        return None, [], 0, 0
+    line_height = max(1, int(size * 1.35))
+    widths = [_line_width(line, font_path, size) for line in lines]
+    width = max(1, int(np.ceil(max(widths) if widths else 1)))
+    height = max(1, line_height * len(lines))
+    layer = Image.new('RGBA', (width + 4, height + 4), (0, 0, 0, 0))
+    baseline = int(size * 0.95)
+    for i, line in enumerate(lines):
+        lw = widths[i]
+        _render_shaped_line(layer, line, font_path, size, (width - lw) / 2.0 + 2, baseline + i * line_height)
+    return layer, lines, width, height
 
-        too_wide = False
+def _fits_circle(text, font_path, size, diameter, padding):
+    max_width = max(8, diameter - padding * 2)
+    layer, lines, w, h = _text_layer(text, font_path, size, max_width)
+    if layer is None:
+        return None
+    alpha = np.asarray(layer.getchannel('A'))
+    ys, xs = np.nonzero(alpha > 8)
+    if len(xs) == 0:
+        return None
+    cx = layer.width / 2.0
+    cy = layer.height / 2.0
+    radius = diameter / 2.0 - padding
+    if radius <= 1:
+        return None
+    dx = xs - cx
+    dy = ys - cy
+    if float(np.max(dx * dx + dy * dy)) > radius * radius:
+        return None
+    return layer, lines
 
-        for line in lines:
-
-            box = draw.textbbox(
-                (0, 0),
-                line,
-                font=font
-            )
-
-            width = box[2] - box[0]
-            height = box[3] - box[1]
-
-            if width > diameter:
-                too_wide = True
-                break
-
-            line_sizes.append((width, height))
-
-        if too_wide:
-            continue
-
-        # ---------------------------------------------------------
-        # Total text block height
-        # ---------------------------------------------------------
-        total_height = (
-            sum(h for _, h in line_sizes)
-            + spacing * max(0, len(line_sizes) - 1)
-        )
-
-        if total_height > diameter:
-            continue
-
-        # ---------------------------------------------------------
-        # Check every line against the safe circle.
-        #
-        # The entire horizontal extent of every line must remain
-        # inside the circle.
-        # ---------------------------------------------------------
-        y = cy - total_height / 2.0
-
-        ok = True
-
-        for width, height in line_sizes:
-
-            line_cy = y + height / 2.0
-
-            dy = abs(line_cy - cy)
-
-            if dy >= radius:
-                ok = False
-                break
-
-            circle_width = 2.0 * (
-                max(
-                    0.0,
-                    radius * radius - dy * dy
-                ) ** 0.5
-            )
-
-            # Additional safety margin.
-            allowed_width = circle_width - (padding * 0.5)
-
-            if width > allowed_width:
-                ok = False
-                break
-
-            y += height + spacing
-
-        if ok:
-            return font, lines, spacing
-
-    # Very small fallback.
-    return ImageFont.truetype(font_path, 8), [text], 2
-
+def render_text_safe_circle(im, text, bbox, padding=12):
+    font_path = ensure_bengali_font()
+    if not font_path:
+        raise RuntimeError('Bengali font not found')
+    x0, y0, x1, y1 = bbox
+    bw = max(1, x1 - x0); bh = max(1, y1 - y0)
+    diameter = min(bw, bh)
+    max_size = max(8, int(diameter * 0.42))
+    min_size = 8
+    chosen = None
+    for size in range(max_size, min_size - 1, -1):
+        result = _fits_circle(text, font_path, size, diameter, padding)
+        if result is not None:
+            chosen = (size, result[0], result[1])
+            break
+    if chosen is None:
+        size = min_size
+        layer, lines, _, _ = _text_layer(text, font_path, size, max(8, diameter - padding * 2))
+        chosen = (size, layer, lines)
+    _, layer, _ = chosen
+    px = int(round(x0 + (bw - layer.width) / 2.0))
+    py = int(round(y0 + (bh - layer.height) / 2.0))
+    visible = Image.new('RGBA', im.size, (0, 0, 0, 0))
+    visible.alpha_composite(layer, (px, py))
+    im.paste(visible, (0, 0), visible)
 
 @app.post('/api/render')
-async def render(
-    file: UploadFile = File(...),
-    items_json: str = Form(...)
-):
-    """
-    Render Unicode Bengali directly onto the selected bubbles.
-
-    Pipeline:
-
-        Avro/Unicode Bengali
-              ↓
-        Noto Sans Bengali
-              ↓
-        Safe-circle fitting
-              ↓
-        Centered text
-              ↓
-        Final PNG
-
-    No Bijoy conversion is used here.
-    """
-
+async def render(file:UploadFile=File(...),items_json:str=Form(...)):
     try:
-
-        # ---------------------------------------------------------
-        # Read original image
-        # ---------------------------------------------------------
-        data = await file.read()
-
-        im = Image.open(
-            io.BytesIO(data)
-        ).convert('RGB')
-
-        # ---------------------------------------------------------
-        # Parse selected bubble data
-        # ---------------------------------------------------------
-        items = json.loads(items_json)
-
-        if not isinstance(items, list):
-            raise ValueError(
-                'items_json must be a list'
-            )
-
-        # ---------------------------------------------------------
-        # Make sure Bengali font is available
-        # ---------------------------------------------------------
-        font_path = ensure_bengali_font()
-
-        if not font_path:
-            raise HTTPException(
-                status_code=500,
-                detail=(
-                    'Bengali font not found. '
-                    'NotoSansBengali-Regular.ttf is required.'
-                )
-            )
-
-        draw = ImageDraw.Draw(im)
-
-        # ---------------------------------------------------------
-        # Process each selected bubble
-        # ---------------------------------------------------------
+        data=await file.read();im=Image.open(io.BytesIO(data)).convert('RGBA');items=json.loads(items_json)
+        if not isinstance(items,list):raise ValueError('items_json must be a list')
+        draw=ImageDraw.Draw(im)
         for item in items:
-
-            bbox = item.get('bbox') or []
-
-            # IMPORTANT:
-            # Translation remains Unicode Bengali.
-            # No Bijoy conversion.
-            text = (
-                item.get('translation') or ''
-            ).strip()
-
-            if len(bbox) != 4 or not text:
-                continue
-
-            # -----------------------------------------------------
-            # Sanitize bbox
-            # -----------------------------------------------------
-            x0, y0, x1, y1 = [
-                int(v) for v in bbox
-            ]
-
-            x0 = max(
-                0,
-                min(im.width - 1, x0)
-            )
-
-            y0 = max(
-                0,
-                min(im.height - 1, y0)
-            )
-
-            x1 = max(
-                x0 + 1,
-                min(im.width, x1)
-            )
-
-            y1 = max(
-                y0 + 1,
-                min(im.height, y1)
-            )
-
-            # -----------------------------------------------------
-            # Get bubble polygon
-            # -----------------------------------------------------
-            poly = item.get('polygon') or []
-
-            safe_poly = []
-
-            if poly and len(poly) >= 3:
-
+            bbox=item.get('bbox') or [];text=(item.get('translation') or '').strip()
+            if len(bbox)!=4 or not text:continue
+            x0,y0,x1,y1=[int(v) for v in bbox]
+            x0=max(0,min(im.width-1,x0));y0=max(0,min(im.height-1,y0));x1=max(x0+1,min(im.width,x1));y1=max(y0+1,min(im.height,y1))
+            poly=item.get('polygon') or []
+            if poly and len(poly)>=3:
+                safe_poly=[]
                 for p in poly:
-
-                    if len(p) >= 2:
-
-                        px = max(
-                            0,
-                            min(
-                                im.width - 1,
-                                int(p[0])
-                            )
-                        )
-
-                        py = max(
-                            0,
-                            min(
-                                im.height - 1,
-                                int(p[1])
-                            )
-                        )
-
-                        safe_poly.append(
-                            (px, py)
-                        )
-
-            # -----------------------------------------------------
-            # Clear original bubble text
-            # -----------------------------------------------------
-            #
-            # Prefer the detected polygon when available.
-            # Otherwise use the bounding rectangle.
-            #
-            if len(safe_poly) >= 3:
-
-                draw.polygon(
-                    safe_poly,
-                    fill='white'
-                )
-
-            else:
-
-                draw.rectangle(
-                    (x0, y0, x1, y1),
-                    fill='white'
-                )
-
-            # -----------------------------------------------------
-            # Fit Unicode Bengali inside safe circle
-            # -----------------------------------------------------
-            font, lines, spacing = fit_circle_text(
-                draw,
-                text,
-                [x0, y0, x1, y1],
-                font_path,
-                padding=12
-            )
-
-            # -----------------------------------------------------
-            # Prepare multiline text
-            # -----------------------------------------------------
-            block = '\n'.join(lines)
-
-            bb = draw.multiline_textbbox(
-                (0, 0),
-                block,
-                font=font,
-                spacing=spacing,
-                align='center'
-            )
-
-            tw = bb[2] - bb[0]
-            th = bb[3] - bb[1]
-
-            # -----------------------------------------------------
-            # Exact center of bubble
-            # -----------------------------------------------------
-            cx = (x0 + x1) / 2.0
-            cy = (y0 + y1) / 2.0
-
-            tx = cx - tw / 2.0
-            ty = cy - th / 2.0
-
-            # -----------------------------------------------------
-            # Final Unicode Bengali rendering
-            # -----------------------------------------------------
-            draw.multiline_text(
-                (tx, ty),
-                block,
-                font=font,
-                fill='black',
-                spacing=spacing,
-                align='center'
-            )
-
-        # ---------------------------------------------------------
-        # Return original-size PNG
-        # ---------------------------------------------------------
-        out = io.BytesIO()
-
-        im.save(
-            out,
-            format='PNG'
-        )
-
-        out.seek(0)
-
-        return StreamingResponse(
-            out,
-            media_type='image/png',
-            headers={
-                'Content-Disposition':
-                    'inline; filename="translated.png"'
-            }
-        )
-
-    except HTTPException:
-        raise
-
+                    if len(p)>=2:safe_poly.append((max(0,min(im.width-1,int(p[0]))),max(0,min(im.height-1,int(p[1])))))
+                if len(safe_poly)>=3:draw.polygon(safe_poly,fill='white')
+                else:draw.rectangle((x0,y0,x1,y1),fill='white')
+            else:draw.rectangle((x0,y0,x1,y1),fill='white')
+            render_text_safe_circle(im,text,[x0,y0,x1,y1],padding=max(10,int(min(x1-x0,y1-y0)*0.08)))
+        out=io.BytesIO();im.convert('RGB').save(out,format='PNG');out.seek(0)
+        return StreamingResponse(out,media_type='image/png',headers={'Content-Disposition':'inline; filename="translated.png"'})
+    except HTTPException:raise
     except Exception as e:
+        print('RENDER ERROR:',repr(e))
+        raise HTTPException(500,f'Render failed: {type(e).__name__}: {e}')
 
-        print(
-            'RENDER ERROR:',
-            repr(e)
-        )
-
-        raise HTTPException(
-            status_code=500,
-            detail=(
-                f'Render failed: '
-                f'{type(e).__name__}: {e}'
-            )
-        )
 @app.post('/api/auto-translate')
 async def auto_translate(req:AutoTranslateRequest):
     out=[]
