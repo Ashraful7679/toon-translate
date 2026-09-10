@@ -54,7 +54,6 @@ async def serve_index():
 <script>
 (() => {
   const state = { manual: {}, mode: 'bubble' };
-  // Use the page's global lexical currentIndex, not window.currentIndex.
   const key = () => String(typeof currentIndex !== 'undefined' ? currentIndex : -1);
   const items = () => state.manual[key()] || (state.manual[key()] = []);
 
@@ -67,29 +66,6 @@ async def serve_index():
     const img = document.getElementById('mainImage');
     if (!img || !img.src) return null;
     return fetch(img.src).then(r => r.blob()).then(b => new File([b], 'toon-page.png', {type:b.type || 'image/png'}));
-  }
-
-  // Keep the active bubble visible in the image area while translating.
-  function scrollImageToBubble(i) {
-    const list = items(), it = list[i];
-    const stage = document.getElementById('stageView');
-    const img = document.getElementById('mainImage');
-    if (!it || !stage || !img || !img.naturalWidth || !img.naturalHeight) return;
-    const b = it.bbox || [];
-    if (b.length < 4) return;
-    const rect = img.getBoundingClientRect();
-    const stageRect = stage.getBoundingClientRect();
-    const cx = rect.left + ((b[0] + b[2]) / 2) * (rect.width / img.naturalWidth);
-    const cy = rect.top + ((b[1] + b[3]) / 2) * (rect.height / img.naturalHeight);
-    const targetLeft = stage.scrollLeft + (cx - stageRect.left) - stage.clientWidth / 2;
-    const targetTop = stage.scrollTop + (cy - stageRect.top) - stage.clientHeight / 2;
-    const maxLeft = Math.max(0, stage.scrollWidth - stage.clientWidth);
-    const maxTop = Math.max(0, stage.scrollHeight - stage.clientHeight);
-    stage.scrollTo({
-      left: Math.max(0, Math.min(maxLeft, targetLeft)),
-      top: Math.max(0, Math.min(maxTop, targetTop)),
-      behavior: 'smooth'
-    });
   }
 
   function addToolbar() {
@@ -128,12 +104,12 @@ async def serve_index():
     items().forEach((it,i)=>{const[x0,y0,x1,y1]=it.bbox,g=document.createElementNS('http://www.w3.org/2000/svg','g'),rect=document.createElementNS('http://www.w3.org/2000/svg','rect');rect.setAttribute('x',x0);rect.setAttribute('y',y0);rect.setAttribute('width',Math.max(1,x1-x0));rect.setAttribute('height',Math.max(1,y1-y0));rect.setAttribute('class','bbox-rect active');rect.style.fill='rgba(16,185,129,.10)';rect.style.stroke='#10b981';rect.addEventListener('click',e=>{e.stopPropagation();focusCard(i);});g.appendChild(rect);svg.appendChild(g);});
   }
 
-  function focusCard(i){const el=document.getElementById('bubble-card-'+i);if(el){el.scrollIntoView({behavior:'smooth',block:'center'});const inp=el.querySelector('textarea');if(inp){inp.focus();setTimeout(()=>scrollImageToBubble(i),80);}}}
+  function focusCard(i){const el=document.getElementById('bubble-card-'+i);if(el){el.scrollIntoView({behavior:'smooth',block:'center'});const inp=el.querySelector('textarea');if(inp)inp.focus();}}
 
   function renderManualSidebar(){
     const wrap=document.getElementById('sidebarContent'),count=document.getElementById('detectionCount');if(!wrap)return;const list=items();if(count)count.textContent=list.length;
     if(!list.length){wrap.innerHTML='<div class="empty-state"><div class="empty-icon">💬</div><p>Bubble Select চালু রেখে ছবির প্রতিটি পূর্ণ বাবলের ভিতরে একবার ক্লিক করুন। অসম্পূর্ণ বাবল ক্লিক করবেন না।</p></div>';return;}
-    wrap.innerHTML='';list.forEach((it,i)=>{const card=document.createElement('div');card.className='item-card';card.id='bubble-card-'+i;card.innerHTML=`<div class="item-header"><span class="item-badge">Bubble ${i+1}</span><div class="item-actions"><button class="btn-icon" title="এই বাবল মুছুন">🗑️</button></div></div><div class="original-text">Manual bubble selection • ${it.bbox[2]-it.bbox[0]} × ${it.bbox[3]-it.bbox[1]} px</div><div class="input-wrapper"><textarea class="translation-input" placeholder="এখানে বাংলা অনুবাদ লিখুন...">${it.translation||''}</textarea></div><div class="input-tip"><span>Enter = পরের বাবল</span><span>Render করলে লেখা বাবলের মধ্যে Auto-Fit হবে</span></div>`;const ta=card.querySelector('textarea');ta.addEventListener('focus',()=>{setTimeout(()=>scrollImageToBubble(i),80);});ta.addEventListener('click',()=>{setTimeout(()=>scrollImageToBubble(i),50);});ta.addEventListener('input',()=>{it.translation=ta.value;});ta.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();const n=wrap.querySelectorAll('textarea')[i+1];if(n){n.focus();setTimeout(()=>scrollImageToBubble(i+1),80);}}});card.querySelector('.btn-icon').onclick=()=>{list.splice(i,1);renderManualSidebar();drawManualOverlay();};wrap.appendChild(card);});
+    wrap.innerHTML='';list.forEach((it,i)=>{const card=document.createElement('div');card.className='item-card';card.id='bubble-card-'+i;card.innerHTML=`<div class="item-header"><span class="item-badge">Bubble ${i+1}</span><div class="item-actions"><button class="btn-icon" title="এই বাবল মুছুন">🗑️</button></div></div><div class="original-text">Manual bubble selection • ${it.bbox[2]-it.bbox[0]} × ${it.bbox[3]-it.bbox[1]} px</div><div class="input-wrapper"><textarea class="translation-input" placeholder="এখানে বাংলা অনুবাদ লিখুন...">${it.translation||''}</textarea></div><div class="input-tip"><span>Enter = পরের বাবল</span><span>Render করলে লেখা বাবলের মধ্যে Auto-Fit হবে</span></div>`;const ta=card.querySelector('textarea');ta.addEventListener('input',()=>{it.translation=ta.value;});ta.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();const n=wrap.querySelectorAll('textarea')[i+1];if(n)n.focus();}});card.querySelector('.btn-icon').onclick=()=>{list.splice(i,1);renderManualSidebar();drawManualOverlay();};wrap.appendChild(card);});
   }
 
   async function renderManual(){
@@ -149,7 +125,7 @@ async def serve_index():
       const img=document.getElementById('mainImage');
       if(typeof activeView!=='undefined')activeView='rendered';
       document.getElementById('btnOriginal')?.classList.remove('active');document.getElementById('btnRendered')?.classList.add('active');
-      img.src=url;if(img.onload){};
+      img.src=url;
     }catch(e){console.error(e);alert('Render করা যায়নি: '+e.message);}
     finally{if(window.hideSpinner)window.hideSpinner();}
   }
@@ -161,7 +137,7 @@ async def serve_index():
     const observer=new MutationObserver(()=>{addToolbar();const im=document.getElementById('mainImage');if(im&&!im.dataset.bubbleBound){im.dataset.bubbleBound='1';im.addEventListener('click',selectBubble);}});observer.observe(document.body,{childList:true,subtree:true});renderManualSidebar();drawManualOverlay();
   }
   window.addEventListener('load',()=>setTimeout(install,250));
-  window.toonBubbleManual={renderManual,renderManualSidebar,drawManualOverlay,scrollImageToBubble};
+  window.toonBubbleManual={renderManual,renderManualSidebar,drawManualOverlay};
 })();
 </script>
 '''
@@ -210,8 +186,7 @@ def merge_detections(results):
         duplicate_index=None
         for i,existing in enumerate(kept):
             iou=bbox_iou(item['bbox'],existing['bbox']);sim=text_similarity(item['text'],existing['text'])
-            if iou>=0.55 or (iou>=0.25 and sim>=0.65) or (sim>=0.90 and iou>=0.10):
-                duplicate_index=i;break
+            if iou>=0.55 or (iou>=0.25 and sim>=0.65) or (sim>=0.90 and iou>=0.10):duplicate_index=i;break
         if duplicate_index is None:kept.append(item)
     return kept
 
@@ -242,44 +217,41 @@ async def select_bubble(file: UploadFile=File(...),x:int=Form(...),y:int=Form(..
     if img is None:raise HTTPException(400,"Invalid image")
     h,w=img.shape[:2]
     if not(0<=x<w and 0<=y<h):raise HTTPException(400,"Point outside image")
-    gray=cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
-    mask=cv2.inRange(gray,245,255)
-    n,labels,stats,cent=cv2.connectedComponentsWithStats(mask,8)
-    candidates=[]
+    gray=cv2.cvtColor(img,cv2.COLOR_BGR2GRAY);mask=cv2.inRange(gray,245,255)
+    n,labels,stats,cent=cv2.connectedComponentsWithStats(mask,8);candidates=[]
     for i in range(1,n):
         x0,y0,bw,bh,area=stats[i]
         if area<500 or bw<30 or bh<30:continue
         if not(x0<=x<x0+bw and y0<=y<y0+bh):continue
         fill=area/float(max(1,bw*bh))
-        if fill<0.35:continue
-        if bw>0.85*w or bh>0.85*h:continue
-        dist=abs((x0+bw/2)-x)+abs((y0+bh/2)-y)
-        candidates.append((dist,area,[int(x0),int(y0),int(x0+bw),int(y0+bh)]))
+        if fill<0.35 or bw>0.85*w or bh>0.85*h:continue
+        dist=abs((x0+bw/2)-x)+abs((y0+bh/2)-y);candidates.append((dist,area,[int(x0),int(y0),int(x0+bw),int(y0+bh)]))
     if not candidates:raise HTTPException(404,"Full speech bubble not found")
-    _,area,bbox=min(candidates,key=lambda t:t[0])
-    x0,y0,x1,y1=bbox;roi=gray[y0:y1,x0:x1];white=cv2.inRange(roi,245,255)
-    contours,_=cv2.findContours(white,cv2.RETR_EXTERNAL,cv2.CHAIN_APPROX_SIMPLE)
+    _,_,bbox=min(candidates,key=lambda z:z[0]);x0,y0,x1,y1=bbox
+    roi=gray[y0:y1,x0:x1];_,th=cv2.threshold(roi,245,255,cv2.THRESH_BINARY);contours,_=cv2.findContours(th,cv2.RETR_EXTERNAL,cv2.CHAIN_APPROX_SIMPLE)
     poly=[]
     if contours:
-        c=max(contours,key=cv2.contourArea);eps=0.01*cv2.arcLength(c,True);p=cv2.approxPolyDP(c,eps,True).reshape(-1,2);poly=[[int(px+x0),int(py+y0)] for px,py in p]
-    return {"bbox":bbox,"polygon":poly,"area":area}
+        c=max(contours,key=cv2.contourArea);eps=0.01*cv2.arcLength(c,True);p=cv2.approxPolyDP(c,eps,True).reshape(-1,2)
+        poly=[[int(px+x0),int(py+y0)] for px,py in p]
+    return {"bbox":bbox,"polygon":poly}
 
 def wrap_text(text,font,max_width):
-    words=text.split();lines=[];cur=""
+    words=text.split();lines=[];cur=''
     for word in words:
-        test=word if not cur else cur+" "+word
-        if font.getlength(test)<=max_width:cur=test
+        test=word if not cur else cur+' '+word
+        try:w=font.getlength(test)
+        except Exception:w=len(test)*getattr(font,'size',12)*0.55
+        if w<=max_width:cur=test
         else:
             if cur:lines.append(cur)
             cur=word
     if cur:lines.append(cur)
-    return lines or [""]
+    return lines or ['']
 
 def fit_font(draw,text,max_w,max_h):
     if not FONT_PATH:return ImageFont.load_default()
     for size in range(max(10,int(min(max_h,max_w)*0.08)),7,-1):
-        f=ImageFont.truetype(FONT_PATH,size)
-        lines=wrap_text(text,f,max_w);bbox=draw.multiline_textbbox((0,0),"\n".join(lines),font=f,spacing=max(2,size//5),align='center')
+        f=ImageFont.truetype(FONT_PATH,size);lines=wrap_text(text,f,max_w);spacing=max(2,size//5);bbox=draw.multiline_textbbox((0,0),'\n'.join(lines),font=f,spacing=spacing,align='center')
         if bbox[2]-bbox[0]<=max_w and bbox[3]-bbox[1]<=max_h:return f
     return ImageFont.truetype(FONT_PATH,8)
 
@@ -289,8 +261,7 @@ async def render(file:UploadFile=File(...),items_json:str=Form(...)):
     for item in items:
         bbox=item.get('bbox') or [];text=(item.get('translation') or '').strip()
         if len(bbox)!=4 or not text:continue
-        x0,y0,x1,y1=[int(v) for v in bbox]
-        poly=item.get('polygon') or []
+        x0,y0,x1,y1=[int(v) for v in bbox];poly=item.get('polygon') or []
         if poly and len(poly)>=3:draw.polygon([tuple(p) for p in poly],fill='white')
         else:draw.rectangle((x0,y0,x1,y1),fill='white')
         max_w=max(20,x1-x0-20);max_h=max(20,y1-y0-20);font=fit_font(draw,text,max_w,max_h);lines=wrap_text(text,font,max_w);spacing=max(2,int(getattr(font,'size',12)*0.2));bb=draw.multiline_textbbox((0,0),'\n'.join(lines),font=font,spacing=spacing,align='center');tw,th=bb[2]-bb[0],bb[3]-bb[1];tx=x0+(x1-x0-tw)/2;ty=y0+(y1-y0-th)/2;draw.multiline_text((tx,ty),'\n'.join(lines),font=font,fill='black',spacing=spacing,align='center')
@@ -306,4 +277,6 @@ async def auto_translate(req:AutoTranslateRequest):
             else:out.append(t)
         except Exception:out.append(t)
     return {"translations":out}
-'''
+
+if __name__=='__main__':
+    import uvicorn;uvicorn.run(app,host='0.0.0.0',port=8000)
